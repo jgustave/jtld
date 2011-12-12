@@ -1,14 +1,19 @@
 package com.gong.jtld;
 
+import com.googlecode.javacpp.BytePointer;
 import com.googlecode.javacv.cpp.opencv_core;
 import com.googlecode.javacv.cpp.opencv_core.CvMat;
+import com.googlecode.javacv.cpp.opencv_imgproc;
+import org.apache.commons.math.stat.descriptive.moment.Mean;
 import org.apache.commons.math.stat.descriptive.rank.Median;
 
+import java.nio.*;
 import java.util.Arrays;
 
 import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvGetRectSubPix;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvMatchTemplate;
+import static com.googlecode.javacv.cpp.opencv_imgproc.cvResize;
 
 /**
  *
@@ -196,6 +201,78 @@ public class Utils {
         }
         return( result );
     }
+
+    /**
+     * Extract the image patch specified by the BB
+     * @param image
+     * @param boundingBox
+     * @return
+     */
+    public static IplImage getImagePatch( IplImage image, BoundingBox boundingBox ) {
+        IplImage result;
+
+        //cvSetImageROI( image, cvRect( x1, y1, image->width, image->height ));
+
+
+        CvRect regionOfInterest = cvRect(Math.round(boundingBox.x1),
+                                         Math.round(boundingBox.y1 ),
+                                         Math.round(boundingBox.getWidth() ),
+                                         Math.round(boundingBox.getHeight() ) );
+        cvSetImageROI(image,regionOfInterest);
+
+        // copy sub-image
+        result = cvCreateImage( cvSize(regionOfInterest.width(), regionOfInterest.height()),
+                                image.depth(),
+                                image.nChannels() );
+        cvCopy( image, result );
+        cvResetImageROI( image ); // release image ROI
+
+        //TODO: sub pixel.. come back to this later.
+
+        return result;
+    }
+
+    /**
+     * Pattern is used in pattern matching on image.
+     * An image is scaled to a particular size.
+     * And then we take the Zero Mean And Unit Variance.
+     * NOTE: BUGBUG: I can't tell.. whether it does this on the combined RGB, or on individual channels
+     * ..I'm guessing individual channels... otherwise the High (Red) would throw this off..
+     * .. And I think this is supposed to make it Brightness insensitive.
+     * @param image
+     * @return
+     */
+    public static double[] getPattern( IplImage image, int width, int height ) {
+        //resize the image
+        //cast to double array
+        //get mean of double array
+        //subtract mean from orig double array
+
+        IplImage destImage = cvCreateImage(cvSize(width,height),
+                                           image.depth(),
+                                           image.nChannels() );
+
+        cvResize( image, destImage, opencv_imgproc.CV_INTER_LINEAR );
+
+        ByteBuffer  bb       = destImage.getByteBuffer();
+        //BUGBUG: Not totally sure if there isn't an alignment issue...
+        int         numBytes = width * height * (image.depth()/8) * image.nChannels();
+        double[]    data     = new double[ numBytes ];
+        for( int x=0;x<numBytes;x++) {
+            //BUGBUG: Not sure if we want signed unsigned..also can optimize.
+            data[x] = (int)(bb.get(x) & 0x000000FF);
+        }
+        Mean        mean    = new Mean();
+        double      meanVal = mean.evaluate( data );
+
+        for( int x=0;x<data.length;x++) {
+            data[x] -= meanVal;
+        }
+        cvReleaseImage(destImage);
+
+        return( data );
+    }
+
 
     /**
      *

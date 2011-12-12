@@ -1,11 +1,14 @@
 package com.gong.jtld;
 
+import com.googlecode.javacv.cpp.opencv_imgproc;
+
 import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_highgui.*;
+import static com.googlecode.javacv.cpp.opencv_imgproc.cvResize;
 
 /**
  * DYLD_FALLBACK_LIBRARY_PATH=/opt/local/lib/
- * ffmpeg -qscale 5 -r 20 -b 9600 -i imageout-%05d.png movie.mp4
+ * ffmpeg -qscale 5 -r 5 -b 9600 -i imageout-%05d.png movie.mp4
  */
 public class Test4 {
 
@@ -14,6 +17,8 @@ public class Test4 {
         System.out.println("Path:" + System.getProperty("java.library.path") );
 
         Tracker         tracker             = new Tracker();
+//        BoundingBox     boundingBox         = new BoundingBox(285,25,315,90);
+//        BoundingBox     updatedBoundingBox  = new BoundingBox(285,25,315,90);
         BoundingBox     boundingBox         = new BoundingBox(300,30,335,105);
         BoundingBox     updatedBoundingBox  = new BoundingBox(300,30,335,105);
         TrackerResult   result              = null;
@@ -31,118 +36,69 @@ public class Test4 {
                 CV_RGB(0, 255, 0), 1, 8, 0);
         cvSaveImage("/tmp/imageout-00001.png", next );
 
+
+//
+//        IplImage destImage = cvCreateImage(cvSize(20,20),
+//                                           next.depth(),
+//                                           next.nChannels() );
+//
+//        cvResize( next, destImage, opencv_imgproc.CV_INTER_LINEAR );
+//        cvSaveImage("/tmp/patch.png", destImage );
+//        //cvSaveImage("/tmp/patch.png", Utils.getImagePatch(next, boundingBox));
+        double[] val = Utils.getPattern(Utils.getImagePatch( next, boundingBox ), 20,20 );
         //next.release();
 
-        int imageNo = 2;
-        for( int x=6;x<99;x++){
-            //tracker = new Tracker();
+        int outputImageNo = 2;
+        for( int x=6;x<=100;x++){
             String temp     = "00000" + x;
             String inStr  = temp.substring(temp.length()-5,temp.length());
-            temp     = "00000" + imageNo;
+            temp     = "00000" + outputImageNo;
             String outStr  = temp.substring(temp.length()-5,temp.length());
+            System.out.println("::"+inStr);
             nextGray = cvLoadImage("/Users/jerdavis/devhome/jtld/images/"+inStr+".png", CV_LOAD_IMAGE_GRAYSCALE);
             next     = cvLoadImage("/Users/jerdavis/devhome/jtld/images/"+inStr+".png", CV_LOAD_IMAGE_UNCHANGED);
 
             result      = tracker.track(currentGray, nextGray, boundingBox );
-            int[] validIndexes = getValidIndexes( result );
+            int[] validIndexes = Tracker.getValidIndexes(result);
             if( validIndexes.length > 0 ) {
-                updatedBoundingBox = predictBoundingBox( boundingBox, result, validIndexes );
+                updatedBoundingBox = Tracker.predictBoundingBox(boundingBox, result, validIndexes);
             }else {
-                System.out.println("Uh oh, no valid Indexes");
+                System.out.println("Uh oh, no valid Indexes:" + inStr);
+                //need to wait till detector finds object again
+                //null BB.
             }
             boundingBox = updatedBoundingBox;
             //currentGray.release();
             currentGray = nextGray;
+
+            if( boundingBox.isOutsideImage( next.width(), next.height() ) ) {
+                System.out.println("Bounding Box is Outside Image: " + inStr );
+            }
 
             cvRectangle(
                     next,
                     cvPoint(Math.round(updatedBoundingBox.x1), Math.round(updatedBoundingBox.y1)),
                     cvPoint(Math.round(updatedBoundingBox.x2), Math.round(updatedBoundingBox.y2)),
                     CV_RGB(0, 255, 0), 1, 8, 0);
-            cvSaveImage("/tmp/imageout-"+outStr+".png", next );
-            imageNo++;
-        }
+            for( int y=0;y<validIndexes.length;y++) {
+                result.origPoints.position(validIndexes[y]);
+                result.foundPoints.position(validIndexes[y]);
+                cvCircle( next,
+                          cvPoint(Math.round(result.foundPoints.x()),Math.round(result.foundPoints.y())),
+                          1,
+                          CV_RGB(255, 255, 0), 1, 8, 0 );
+                cvLine(next,
+                   cvPoint(Math.round(result.origPoints.x()),Math.round(result.origPoints.y())),
+                   cvPoint(Math.round(result.foundPoints.x()),Math.round(result.foundPoints.y())),
+                   CV_RGB(255, 0, 0), 1, 8, 0);
 
-    }
-
-    private static int[] getValidIndexes(TrackerResult result ) {
-        float   medianForwardBackwardError = (float)Utils.medianIgnoreNan( result.forwardBackwardError );
-        float   medianNormCrossCorrelation = (float)Utils.medianIgnoreNan( result.normCrossCorrelation );
-
-        //Now find which of our results were valid, and save the indexes for later
-        int     numValidIndexes = 0;
-        int[]   tempIndexes    = new int[result.getNumPoints()];
-        for( int x=0;x<result.getNumPoints();x++) {
-            if( result.forwardBackwardError[x] < medianForwardBackwardError  && result.normCrossCorrelation[x] > medianNormCrossCorrelation ) {
-                tempIndexes[numValidIndexes] = x;
-                numValidIndexes++;
             }
-        }
-        int[]   validIndexes   = new int[numValidIndexes];
-        System.arraycopy(tempIndexes,0,validIndexes,0,numValidIndexes);
-
-        return( validIndexes );
-    }
-
-    /**
-     * Given the original bounding box, and the results from optical flow Tracker, predict where the new bounding box is.
-     * This is going to look at two things... One is a general shift of the box... (left/right/up/down) etc.
-     * The other consideration is zooming in/out. (Z). We accomplish the first by looking at the median change between the
-     * X and Y between sets.
-     * The second we look at the pairwise distance.. Or How the points relate to each other in each set.
-     * Imagine the points getting more and less dense (Zoom In/Out respectively)
-     * @param origBoundingBox
-     * @param trackerResult results from the Tracker
-     * @param validIndexes Only these indexes in the results are to be considered
-     * @return
-     */
-    private static BoundingBox predictBoundingBox ( BoundingBox origBoundingBox,
-                                                    TrackerResult trackerResult,
-                                                    int[] validIndexes ) {
-
-        //int numPoints       = trackerResult.getNumPoints();
-        int numValidPoints  = validIndexes.length;
-        CvMat origPoints    = CvMat.create(numValidPoints, 2);
-        CvMat foundPoints   = CvMat.create(numValidPoints, 2);
-
-        for( int i=0;i<numValidPoints;i++) {
-            trackerResult.origPoints.position(validIndexes[i]);
-            trackerResult.foundPoints.position(validIndexes[i]);
-            origPoints.put(i,0,trackerResult.origPoints.x());
-            origPoints.put(i,1,trackerResult.origPoints.y());
-            foundPoints.put(i,0,trackerResult.foundPoints.x());
-            foundPoints.put(i,1,trackerResult.foundPoints.y());
+            cvSaveImage("/tmp/imageout-" + outStr + ".png", next);
+            outputImageNo++;
         }
 
-
-//        CvMat origPoints  = Utils.toMatrix( result.origPoints, result.getNumPoints() );
-//        CvMat foundPoints = Utils.toMatrix( result.foundPoints, result.getNumPoints() );
-        CvMat deltaPoints = CvMat.create(numValidPoints, 2 );
-        cvSub( foundPoints, origPoints, deltaPoints, null );
-
-        double medianChangeX = Utils.medianIgnoreNan( Utils.getColumnSlice( deltaPoints, 0) );
-        double medianChangeY = Utils.medianIgnoreNan( Utils.getColumnSlice( deltaPoints, 1) );
-
-        //Calculate Pairwise Distances for noth old and new
-        CvMat origPairwiseDistance  = Utils.pairwiseDistance(origPoints);
-        CvMat newPairwiseDistance   = Utils.pairwiseDistance(foundPoints);
-
-        //Use that to determine if the Bounding Box needs to be scaled
-        CvMat pairwiseScale         = CvMat.create(origPairwiseDistance.rows(),1);
-        cvDiv(newPairwiseDistance, origPairwiseDistance, pairwiseScale, 1 );
-
-        double medianScale          = Utils.medianIgnoreNan(pairwiseScale.get());
-
-        double shiftX  = 0.5*(medianScale-1)*(origBoundingBox.getWidth()-1);
-        double shiftY  = 0.5*(medianScale-1)*(origBoundingBox.getHeight()-1);
-
-        //BB1  = [BB0(1)-s1; BB0(2)-s2; BB0(3)+s1; BB0(4)+s2] + [dx; dy; dx; dy];
-        BoundingBox result = new BoundingBox( (float)(origBoundingBox.x1 - shiftX + medianChangeX),
-                                              (float)(origBoundingBox.y1 - shiftY + medianChangeY),
-                                              (float)(origBoundingBox.x2 + shiftX + medianChangeX),
-                                              (float)(origBoundingBox.y2 + shiftY + medianChangeY) );
-
-        return( result );
     }
+
+
 
 }

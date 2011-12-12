@@ -1,8 +1,4 @@
 package com.gong.jtld;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_highgui.*;
@@ -58,8 +54,6 @@ public class Test {
                           CV_RGB(0, 0, 255), 1, 8, 0 );
             }
         }
-
-        //Note: I'm not sure I would use median. Maybe just threshold.. FB < N && NCC > M
 
         float   medianForwardBackwardError = (float)Utils.medianIgnoreNan( result.forwardBackwardError );
         float   medianNormCrossCorrelation = (float)Utils.medianIgnoreNan( result.normCrossCorrelation );

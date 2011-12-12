@@ -25,21 +25,21 @@
       <dependency>
           <groupId>javacpp</groupId>
           <artifactId>javacpp</artifactId>
-          <version>0.0.0</version>
+          <version>0.0.1</version>
           <scope>system</scope>
           <systemPath>${project.basedir}/libs/javacpp.jar</systemPath>
       </dependency>
       <dependency>
           <groupId>javacv</groupId>
           <artifactId>javacv</artifactId>
-          <version>0.0.0</version>
+          <version>0.0.1</version>
           <scope>system</scope>
           <systemPath>${project.basedir}/libs/javacv.jar</systemPath>
       </dependency>
       <dependency>
           <groupId>javacv-mac</groupId>
           <artifactId>javacv-mac</artifactId>
-          <version>0.0.0</version>
+          <version>0.0.1</version>
           <scope>system</scope>
           <systemPath>${project.basedir}/libs/javacv-macosx-x86_64.jar</systemPath>
       </dependency>

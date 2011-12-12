@@ -2,6 +2,10 @@ package com.gong.jtld;
 
 import com.googlecode.javacv.cpp.opencv_core.CvPoint2D32f;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 /**
  *
  */
@@ -61,7 +65,123 @@ public class BoundingBox {
         result.position(0);
         return( result );
     }
+    public boolean isOutsideImage(int imageWidth, int imageHeight ) {
+        return( x1 < 0 || y1 < 0 || x2 >= imageWidth  || y2 >= imageHeight );
+    }
     public String toString() {
         return( "BB:[" + x1 + "," + y1 + "] [" + x2 + "," + y2 + "]" );
+    }
+
+    /**
+     * Return a pairwise overlap metric (from 0 to 1)
+     * Result will be of length  (N*(N-1))/2
+     * @param boundingBoxes
+     * @return
+     */
+    public static double[] overlap(List<BoundingBox> boundingBoxes ) {
+        return( null );
+    }
+
+    /**
+     * Return N*M results.. I think N is going to be 1, M is whatever.
+     * @param boundingBoxes1
+     * @param boundingBoxes2
+     * @return
+     */
+    public static double[] overlap(List<BoundingBox> boundingBoxes1, List<BoundingBox> boundingBoxes2 ) {
+        return( null );
+    }
+
+    /**
+     * Create a bunch of BB's that are all over the image space. We will use them to search around..etc
+     * @param origBox
+     * @param imageWidth
+     * @param imageHeight
+     * @param minWindowSize is the minimum dimension size (width or Height)
+     * @return
+     */
+    public static List<TestBoundingBoxes> createTestBoxes(BoundingBox origBox,
+                                                         int imageWidth,
+                                                         int imageHeight,
+                                                         int minWindowSize) {
+        List<TestBoundingBoxes> result = new ArrayList<TestBoundingBoxes>();
+        double   shift  = 0.1;
+        //We will scale the initial bounding box in various interesting ways.
+
+        //1.2^(-10 to 10)
+        double[] scales = { 0.16151,0.19381,0.23257,0.27908,0.33490,
+                            0.40188,0.48225,0.57870,0.69444,0.83333,
+                            1.00000,1.20000,1.44000,1.72800,2.07360,
+                            2.48832,2.98598,3.58318,4.29982,5.15978,6.19174 };
+
+        int[] possibleWidths            = new int[scales.length];
+        int[] possibleHeights           = new int[scales.length];
+        double[] shiftedHW              = new double[scales.length];
+        double[] shiftedHeights         = new double[scales.length];
+
+        if( origBox.getWidth() < minWindowSize  ||  origBox.getHeight() < minWindowSize ) {
+            throw new RuntimeException("Too Small" + origBox );
+        }
+
+        for( int x=0;x<scales.length;x++) {
+            possibleWidths[x]           = (int)Math.round((origBox.getWidth()+1) * scales[x]);
+            possibleHeights[x]          = (int)Math.round((origBox.getHeight()+1) * scales[x]);
+            shiftedHeights[x]           = possibleHeights[x] * shift;
+            shiftedHW[x]                = Math.min(possibleHeights[x], possibleWidths[x]) * shift;
+        }
+
+        List<Integer> lefts = new ArrayList<Integer>();
+        List<Integer> tops  = new ArrayList<Integer>();
+        //bbf = 2  2  Img.H   Img.W
+        for( int x=0;x<scales.length;x++) {
+
+            if( possibleWidths[x] < minWindowSize || possibleHeights[x] <minWindowSize ) {
+                continue;
+            }
+
+            lefts.clear();
+            tops.clear();
+
+            double left = 2;
+            int maxWidth  = imageWidth - possibleWidths[x]-1;
+            int maxHeight = imageHeight - possibleHeights[x]-1;
+
+            //This Offset is matlab rounding compat.. but in the end..
+            //this won't matter.. optimize it later.
+            while( left - (0.00001) <= maxWidth ) {
+                lefts.add((int)Math.round(left));
+                left += shiftedHeights[x];
+            }
+
+            double top = 2;
+            while( top - (0.00001) <= maxHeight ) {
+                tops.add((int)Math.round(top));
+                top += shiftedHW[x];
+            }
+            TestBoundingBoxes subResult = new TestBoundingBoxes( possibleHeights[x],
+                                                                 possibleWidths[x],
+                                                                 lefts.size() );
+
+            for( int i=0;i<tops.size();i++)
+            {
+                for( int j=0;j<lefts.size();j++) {
+                    subResult.boundingBoxes.add(
+                            new BoundingBox( (float) lefts.get(j),
+                                             (float) tops.get(i),
+                                             (float) (lefts.get(j) + possibleWidths[x] - 1),
+                                             (float) (tops.get(i) + possibleHeights[x] - 1)));
+                }
+            }
+            if( subResult.boundingBoxes.size() > 0 ) {
+                result.add(subResult);
+            }
+        }
+        return( result );
+
+    }
+    public static void main(String[] args ) {
+        BoundingBox bb = new BoundingBox(1,1,30,30);
+        List<TestBoundingBoxes> result = createTestBoxes(bb, 75, 50, 24);
+        System.out.println("Result " + result );
     }
 }
