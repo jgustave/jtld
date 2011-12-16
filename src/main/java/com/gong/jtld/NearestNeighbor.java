@@ -89,6 +89,10 @@ public class NearestNeighbor {
         return( getFoo( patchPattern ) );
     }
 
+    public String getStatus () {
+        return( "Positive:" + positivePatchPatterns.size() + " Negative:" + negativePatchPatterns.size() );
+    }
+
     public static class Foo {
         public final float relativeSimilarity;
         public final float conservativeSimilarity;

@@ -140,6 +140,23 @@ public class TestInit {
                            font,
                            CV_RGB(0, 255, 0) );
 
+
+///////////////////////// Learning new Nearest Neghbors
+                //get the top N+1 overlaps > 0.6
+                bestOverlaps  = getBestOverlappingScanBoxes(updatedBoundingBox, testBoundingBoxes);
+                //Get a random sampling of the 100 worst. <0.2 overlap
+                worstOverlaps = getWorstOverlappingScanBoxes(updatedBoundingBox, testBoundingBoxes);
+                if( bestOverlaps.size() != 0  &&  worstOverlaps.size() != 0 ) {
+                    bestBox       = bestOverlaps.remove(0);
+
+                    positivePatchPatterns = getPositivePatchPatterns( nextGray, bestBox, patchSize );
+                    negativePatchPatterns = getNegativePatchPatterns( nextGray, worstOverlaps, patchSize );
+
+                    nearestNeighbor.init( positivePatchPatterns, negativePatchPatterns );
+                    System.out.println("Status:" + nearestNeighbor.getStatus() );
+                }
+///////////////////////
+
             }else {
                 System.out.println("Uh oh, no valid Indexes:" + inStr);
                 //need to wait till detector finds object again
@@ -162,7 +179,8 @@ public class TestInit {
                 result.origPoints.position(validIndexes[y]);
                 result.foundPoints.position(validIndexes[y]);
                 cvCircle( next,
-                          cvPoint(Math.round(result.foundPoints.x()),Math.round(result.foundPoints.y())),
+                          cvPoint(Math.round(result.foundPoints.x()),
+                                  Math.round(result.foundPoints.y())),
                           1,
                           CV_RGB(255, 255, 0), 1, 8, 0 );
                 cvLine(next,
@@ -197,6 +215,9 @@ public class TestInit {
 
         List<BoundingBox> worstList = new ArrayList<BoundingBox>();
         for( int x=0;x<NUM_CLOSEST+1;x++) {
+            if( closestMap.size() == 0 ) {
+                break;
+            }
             worstList.add(closestMap.pollFirstEntry().getValue());
         }
         Collections.shuffle( worstList );
@@ -263,6 +284,9 @@ public class TestInit {
 
         List<BoundingBox> closestList = new ArrayList<BoundingBox>();
         for( int x=0;x<NUM_CLOSEST+1;x++) {
+            if( closestMap.size() == 0 ) {
+                break;
+            }
             closestList.add( closestMap.pollFirstEntry().getValue() );
         }
 

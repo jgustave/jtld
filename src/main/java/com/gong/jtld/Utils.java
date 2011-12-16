@@ -215,8 +215,8 @@ public class Utils {
 
         result = getPattern( patch, patternSize );
 
-        //BUGBUG: releasing seems to cause memory issues
-        //cvReleaseImage( patch );
+        //BUGBUG: releasing seems to cause memory issues but probably leaks
+//        cvReleaseImage( patch );
         return( result );
 
     }
@@ -274,6 +274,8 @@ public class Utils {
      * An image is scaled to a particular size.
      * And then we take the Zero Mean And Unit Variance.
      * I assume this is going to be used on a GRAY scale image.
+     * Float is fine because we are taking an 8bit value and
+     * just subtracting the mean..
      * @param image
      * @return
      */
