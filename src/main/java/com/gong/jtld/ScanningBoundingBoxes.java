@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
+ * When scanning an image, these are the bounding boxes we are going to use.
  */
-public class TestBoundingBoxes {
+public class ScanningBoundingBoxes {
     //BB
     //Num X shifts per Y shift
     //pointer to scale used
@@ -18,7 +18,7 @@ public class TestBoundingBoxes {
     //This is the number of X Shifted BB's before the Y shift
     public final int numXShifts;
 
-    public TestBoundingBoxes (int scaleHeight, int scaleWidth, int numXShifts ) {
+    public ScanningBoundingBoxes (int scaleHeight, int scaleWidth, int numXShifts) {
         this.scaleHeight = scaleHeight;
         this.scaleWidth  = scaleWidth;
         this.numXShifts  = numXShifts;

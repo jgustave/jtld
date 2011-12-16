@@ -1,4 +1,4 @@
-package com.gong.jtld;
+package com.gong.jtld.test;
 
 import com.googlecode.javacv.cpp.opencv_video;
 

@@ -1,4 +1,9 @@
-package com.gong.jtld;
+package com.gong.jtld.test;
+
+import com.gong.jtld.BoundingBox;
+import com.gong.jtld.Tracker;
+import com.gong.jtld.TrackerResult;
+import com.gong.jtld.Utils;
 
 import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_highgui.*;
@@ -13,10 +18,10 @@ public class Test3 {
         System.out.println("Helloo!");
         System.out.println("Path:" + System.getProperty("java.library.path") );
 
-        Tracker         tracker             = new Tracker();
-        BoundingBox     boundingBox         = new BoundingBox(300,30,335,105);
+        Tracker tracker             = new Tracker();
+        BoundingBox boundingBox         = new BoundingBox(300,30,335,105);
         BoundingBox     updatedBoundingBox  = new BoundingBox(300,30,335,105);
-        TrackerResult   result              = null;
+        TrackerResult result              = null;
 
 
         IplImage currentGray = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00005.png", CV_LOAD_IMAGE_GRAYSCALE);
@@ -66,7 +71,7 @@ public class Test3 {
     }
 
     private static int[] getValidIndexes(TrackerResult result ) {
-        float   medianForwardBackwardError = (float)Utils.medianIgnoreNan( result.forwardBackwardError );
+        float   medianForwardBackwardError = (float) Utils.medianIgnoreNan(result.forwardBackwardError);
         float   medianNormCrossCorrelation = (float)Utils.medianIgnoreNan( result.normCrossCorrelation );
 
         //Now find which of our results were valid, and save the indexes for later

@@ -3,7 +3,6 @@ package com.gong.jtld;
 import com.googlecode.javacv.cpp.opencv_core.CvPoint2D32f;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -52,6 +51,9 @@ public class BoundingBox {
      * @return
      */
     public CvPoint2D32f getInnerGridPoints( int numColumns, int numRows, int margin ) {
+        if( numColumns <= 0 || numRows <= 0) {
+            throw new RuntimeException("getInnerGridPoints too Small " + numRows + " " + numColumns );
+        }
         CvPoint2D32f    result     = new CvPoint2D32f(numColumns*numRows);
         BoundingBox     marginBox  = innerBox(margin);
         float           stepWidth  = marginBox.getWidth() / (numColumns - 1 );
@@ -92,6 +94,32 @@ public class BoundingBox {
         return( null );
     }
 
+    public float overlap( BoundingBox that ) {
+
+        if( this.x1 > that.x2 ||
+            this.y1 > that.y2 ||
+            this.x2 < that.x1 ||
+            this.y2 < that.y1 ) {
+            return( 0 );
+        }
+
+        //+1 because we are talking about the actual rows/columns of an image. (or do we need this?)
+        //and a line is width 0, but is one column/row
+        float columnIntersection = Math.min( this.x2, that.x2 ) - Math.max( this.x1, that.x1 );
+        float rowIntersection    = Math.min( this.y2, that.y2 ) - Math.max( this.y1, that.y1 );
+        float intersectionArea   = columnIntersection * rowIntersection;
+        float thisArea           = this.getArea();
+        float otherArea          = that.getArea();
+
+        return( intersectionArea / (thisArea + otherArea - intersectionArea) );
+
+    }
+
+    public float getArea() {
+        //TODO: add one to w/l?
+        return( (x2-x1) * (y2-y1) );
+    }
+
     /**
      * Create a bunch of BB's that are all over the image space. We will use them to search around..etc
      * @param origBox
@@ -100,11 +128,11 @@ public class BoundingBox {
      * @param minWindowSize is the minimum dimension size (width or Height)
      * @return
      */
-    public static List<TestBoundingBoxes> createTestBoxes(BoundingBox origBox,
+    public static List<ScanningBoundingBoxes> createTestBoxes(BoundingBox origBox,
                                                          int imageWidth,
                                                          int imageHeight,
                                                          int minWindowSize) {
-        List<TestBoundingBoxes> result = new ArrayList<TestBoundingBoxes>();
+        List<ScanningBoundingBoxes> result = new ArrayList<ScanningBoundingBoxes>();
         double   shift  = 0.1;
         //We will scale the initial bounding box in various interesting ways.
 
@@ -158,7 +186,7 @@ public class BoundingBox {
                 tops.add((int)Math.round(top));
                 top += shiftedHW[x];
             }
-            TestBoundingBoxes subResult = new TestBoundingBoxes( possibleHeights[x],
+            ScanningBoundingBoxes subResult = new ScanningBoundingBoxes( possibleHeights[x],
                                                                  possibleWidths[x],
                                                                  lefts.size() );
 
@@ -181,7 +209,103 @@ public class BoundingBox {
     }
     public static void main(String[] args ) {
         BoundingBox bb = new BoundingBox(1,1,30,30);
-        List<TestBoundingBoxes> result = createTestBoxes(bb, 75, 50, 24);
+        List<ScanningBoundingBoxes> result = createTestBoxes(bb, 75, 50, 24);
         System.out.println("Result " + result );
+    }
+
+    /**
+     * Given a set of BB's, return the smallest "convex hull" BB that encapsulates them all.
+     * @param boxes
+     * @return
+     */
+    public static BoundingBox getHullBox (List<BoundingBox> boxes) {
+        float minX1 = boxes.get(0).x1;
+        float minY1 = boxes.get(0).y1;
+        float maxX2 = boxes.get(0).x2;
+        float maxY2 = boxes.get(0).y2;
+
+        for( BoundingBox box : boxes ) {
+            if( box.x1 < minX1 ) {
+                minX1 = box.x1;
+            }
+            if( box.y1 < minY1 ) {
+                minY1 = box.y1;
+            }
+            if( box.x2 > maxX2 ) {
+                maxX2 = box.x2;
+            }
+            if( box.y2 > maxY2 ) {
+                maxY2 = box.y2;
+            }
+        }
+        return( new BoundingBox( minX1, minY1, maxX2, maxY2 ) );
+    }
+
+    public CvPoint2D32f toQuadrangle() {
+        CvPoint2D32f srcPoints = new CvPoint2D32f(4);
+//clockwise
+        srcPoints.position(0).set( x1, y1);
+        srcPoints.position(1).set( x1+getWidth(), y1);
+        srcPoints.position(2).set( x1+getWidth(), y1 + getHeight());
+        srcPoints.position(3).set( x1, y1 + getHeight());
+
+
+//counterclock
+//        srcPoints.position(0).set( x1, y1);
+//        srcPoints.position(1).set( x1, y1 + getHeight());
+//        srcPoints.position(2).set( x1+getWidth(), y1 + getHeight());
+//        srcPoints.position(3).set( x1+getWidth(), y1);
+
+//row major
+//        srcPoints.position(0).set( x1, y1);
+//        srcPoints.position(1).set( x1+getWidth(), y1 );
+//        srcPoints.position(2).set( x1, y1 + getHeight());
+//        srcPoints.position(3).set( x1+getWidth(), y1+getHeight());
+
+//column Major
+//        srcPoints.position(0).set( x1, y1);
+//        srcPoints.position(1).set( x1, y1 + getHeight() );
+//        srcPoints.position(2).set( x1+getWidth(), y1);
+//        srcPoints.position(3).set( x1+getWidth(), y1+getHeight());
+
+        srcPoints.position(0);
+        return( srcPoints );
+    }
+    public CvPoint2D32f toQuadrangleBar() {
+        CvPoint2D32f srcPoints = new CvPoint2D32f(4);
+///clockwise
+        srcPoints.position(0).set( x1+10, y1);
+        srcPoints.position(1).set( x1-10+getWidth(), y1);
+        srcPoints.position(2).set( x1+getWidth(), y1 + getHeight()-15);
+        srcPoints.position(3).set( x1, y1 + getHeight());
+
+
+//counterclock
+//        srcPoints.position(0).set( x1, y1);
+//        srcPoints.position(1).set( x1, y1 + getHeight());
+//        srcPoints.position(2).set( x1+getWidth(), y1 + getHeight());
+//        srcPoints.position(3).set( x1+getWidth(), y1);
+
+//row major
+//        srcPoints.position(0).set( x1, y1);
+//        srcPoints.position(1).set( x1+getWidth(), y1 );
+//        srcPoints.position(2).set( x1, y1 + getHeight());
+//        srcPoints.position(3).set( x1+getWidth(), y1+getHeight());
+
+//column Major
+//        srcPoints.position(0).set( x1, y1);
+//        srcPoints.position(1).set( x1, y1 + getHeight() );
+//        srcPoints.position(2).set( x1+getWidth(), y1);
+//        srcPoints.position(3).set( x1+getWidth(), y1+getHeight());
+
+        srcPoints.position(0);
+        return( srcPoints );
+    }
+
+    public CvPoint2D32f getCenter () {
+        CvPoint2D32f result = new CvPoint2D32f(1);
+        result.set(x1 + (getWidth()*0.5f),
+                   y1 + (getHeight()*0.5f) );
+        return( result );
     }
 }

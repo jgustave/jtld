@@ -1,5 +1,9 @@
-package com.gong.jtld;
+package com.gong.jtld.test;
 
+import com.gong.jtld.BoundingBox;
+import com.gong.jtld.Tracker;
+import com.gong.jtld.TrackerResult;
+import com.gong.jtld.Utils;
 import com.googlecode.javacv.cpp.opencv_imgproc;
 
 import static com.googlecode.javacv.cpp.opencv_core.*;
@@ -16,12 +20,12 @@ public class Test4 {
         System.out.println("Helloo!");
         System.out.println("Path:" + System.getProperty("java.library.path") );
 
-        Tracker         tracker             = new Tracker();
+        Tracker tracker             = new Tracker();
 //        BoundingBox     boundingBox         = new BoundingBox(285,25,315,90);
 //        BoundingBox     updatedBoundingBox  = new BoundingBox(285,25,315,90);
-        BoundingBox     boundingBox         = new BoundingBox(300,30,335,105);
+        BoundingBox boundingBox         = new BoundingBox(300,30,335,105);
         BoundingBox     updatedBoundingBox  = new BoundingBox(300,30,335,105);
-        TrackerResult   result              = null;
+        TrackerResult result              = null;
 
 
         IplImage currentGray = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00005.png", CV_LOAD_IMAGE_GRAYSCALE);
@@ -45,7 +49,7 @@ public class Test4 {
 //        cvResize( next, destImage, opencv_imgproc.CV_INTER_LINEAR );
 //        cvSaveImage("/tmp/patch.png", destImage );
 //        //cvSaveImage("/tmp/patch.png", Utils.getImagePatch(next, boundingBox));
-        double[] val = Utils.getPattern(Utils.getImagePatch( next, boundingBox ), 20,20 );
+        float[] val = Utils.getPattern(Utils.getImagePatch(next, boundingBox), 20);
         //next.release();
 
         int outputImageNo = 2;
