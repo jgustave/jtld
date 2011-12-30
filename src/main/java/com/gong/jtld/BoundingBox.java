@@ -1,5 +1,9 @@
 package com.gong.jtld;
 
+import com.googlecode.javacv.cpp.opencv_core;
+import com.googlecode.javacv.cpp.opencv_core.CvSize;
+import com.googlecode.javacv.cpp.opencv_core.CvRect;
+import static com.googlecode.javacv.cpp.opencv_core.cvRect;
 import com.googlecode.javacv.cpp.opencv_core.CvPoint2D32f;
 
 import java.util.ArrayList;
@@ -70,6 +74,9 @@ public class BoundingBox {
     public boolean isOutsideImage(int imageWidth, int imageHeight ) {
         return( x1 < 0 || y1 < 0 || x2 >= imageWidth  || y2 >= imageHeight );
     }
+    public boolean isOutsideImage (opencv_core.IplImage image) {
+        return( isOutsideImage( image.width(), image.height() ));
+    }
     public String toString() {
         return( "BB:[" + x1 + "," + y1 + "] [" + x2 + "," + y2 + "]" );
     }
@@ -129,18 +136,19 @@ public class BoundingBox {
      * @return
      */
     public static List<ScanningBoundingBoxes> createTestBoxes(BoundingBox origBox,
-                                                         int imageWidth,
-                                                         int imageHeight,
-                                                         int minWindowSize) {
+                                                              double[] scales,
+                                                              int imageWidth,
+                                                              int imageHeight,
+                                                              int minWindowSize) {
         List<ScanningBoundingBoxes> result = new ArrayList<ScanningBoundingBoxes>();
         double   shift  = 0.1;
         //We will scale the initial bounding box in various interesting ways.
 
-        //1.2^(-10 to 10)
-        double[] scales = { 0.16151,0.19381,0.23257,0.27908,0.33490,
-                            0.40188,0.48225,0.57870,0.69444,0.83333,
-                            1.00000,1.20000,1.44000,1.72800,2.07360,
-                            2.48832,2.98598,3.58318,4.29982,5.15978,6.19174 };
+//        //1.2^(-10 to 10)
+//        double[] scales = { 0.16151,0.19381,0.23257,0.27908,0.33490,
+//                            0.40188,0.48225,0.57870,0.69444,0.83333,
+//                            1.00000,1.20000,1.44000,1.72800,2.07360,
+//                            2.48832,2.98598,3.58318,4.29982,5.15978,6.19174 };
 
         int[] possibleWidths            = new int[scales.length];
         int[] possibleHeights           = new int[scales.length];
@@ -186,18 +194,19 @@ public class BoundingBox {
                 tops.add((int)Math.round(top));
                 top += shiftedHW[x];
             }
-            ScanningBoundingBoxes subResult = new ScanningBoundingBoxes( possibleHeights[x],
-                                                                 possibleWidths[x],
-                                                                 lefts.size() );
+            ScanningBoundingBoxes subResult = new ScanningBoundingBoxes( //possibleHeights[x],
+                                                                         //possibleWidths[x],
+                                                                         lefts.size() );
 
             for( int i=0;i<tops.size();i++)
             {
                 for( int j=0;j<lefts.size();j++) {
                     subResult.boundingBoxes.add(
-                            new BoundingBox( (float) lefts.get(j),
-                                             (float) tops.get(i),
-                                             (float) (lefts.get(j) + possibleWidths[x] - 1),
-                                             (float) (tops.get(i) + possibleHeights[x] - 1)));
+                            new ScaledBoundingBox( (float) lefts.get(j),
+                                                 (float) tops.get(i),
+                                                 (float) (lefts.get(j) + possibleWidths[x] - 1),
+                                                 (float) (tops.get(i) + possibleHeights[x] - 1),
+                                                 x ));
                 }
             }
             if( subResult.boundingBoxes.size() > 0 ) {
@@ -209,7 +218,7 @@ public class BoundingBox {
     }
     public static void main(String[] args ) {
         BoundingBox bb = new BoundingBox(1,1,30,30);
-        List<ScanningBoundingBoxes> result = createTestBoxes(bb, 75, 50, 24);
+        List<ScanningBoundingBoxes> result = createTestBoxes(bb, Jtdl.SCALES, 75, 50, 24);
         System.out.println("Result " + result );
     }
 
@@ -271,6 +280,7 @@ public class BoundingBox {
         srcPoints.position(0);
         return( srcPoints );
     }
+
     public CvPoint2D32f toQuadrangleBar() {
         CvPoint2D32f srcPoints = new CvPoint2D32f(4);
 ///clockwise
@@ -307,5 +317,17 @@ public class BoundingBox {
         result.set(x1 + (getWidth()*0.5f),
                    y1 + (getHeight()*0.5f) );
         return( result );
+    }
+
+
+    public CvSize getSize () {
+        CvSize size = new CvSize(1);
+        size.width((int)(getWidth()+0.5f));
+        size.height((int) (getHeight() + 0.5f));
+        return( size );
+    }
+
+    public CvRect getRect () {
+        return( cvRect((int)(x1+0.5f),(int)(y1+0.5f),(int)(getWidth()+0.5f), (int)(getHeight()+0.5f) ) );
     }
 }

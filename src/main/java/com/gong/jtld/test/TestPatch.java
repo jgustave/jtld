@@ -1,9 +1,6 @@
 package com.gong.jtld.test;
 
-import com.gong.jtld.BoundingBox;
-import com.gong.jtld.Fern;
-import com.gong.jtld.ScanningBoundingBoxes;
-import com.gong.jtld.Utils;
+import com.gong.jtld.*;
 
 import java.util.*;
 
@@ -66,20 +63,22 @@ public class TestPatch {
         System.out.println("Path:" + System.getProperty("java.library.path") );
 
 
-        BoundingBox     boundingBox         = new BoundingBox(300,30,335,105);
-        List<ScanningBoundingBoxes> testBoundingBoxes = null;
+        BoundingBox                 boundingBox         = new BoundingBox(300,30,335,105);
+        List<ScanningBoundingBoxes> testBoundingBoxes   = null;
 
 
         IplImage currentGray = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00005.png", CV_LOAD_IMAGE_GRAYSCALE);
 
-        testBoundingBoxes = BoundingBox.createTestBoxes( boundingBox, currentGray.width(),
+        testBoundingBoxes = BoundingBox.createTestBoxes( boundingBox,
+                                                         Jtdl.SCALES,
+                                                         currentGray.width(),
                                                          currentGray.height(),
                                                          24 );
 
-        float CUTOFF = 0.6f;
-        int NUM_CLOSEST = 10; //Keep this many for the hull;
+        float       CUTOFF = 0.6f;
+        int         NUM_CLOSEST = 10; //Keep this many for the hull;
         BoundingBox bestBox = null;
-        float max = 0;
+        float       max = 0;
         List<Float> overlapList = new ArrayList<Float>();
 
         //BUGBUG: This isn't strictly correct... need to handle duplicate overlaps
@@ -116,16 +115,16 @@ public class TestPatch {
         float[] bestPatchPattern = Utils.getPatchPattern(currentGray, bestBox, 15);
         //TODO: Also do MirrorBestPattern
 
-
-        Fern f = new Fern();
-        int variance = 0;
-
-        IplImage fooImage = null;
-        f.getFernPatterns( fooImage,
-                           closestList,
-                           variance );
-
-
+//
+//        //Fern f = new Fern();
+//        int variance = 0;
+//
+//        IplImage fooImage = null;
+//        f.getFernPatterns( fooImage,
+//                           closestList,
+//                           variance );
+//
+//
 
 
         System.out.println("Foo");

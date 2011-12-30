@@ -1,30 +1,282 @@
 package com.gong.jtld;
 
+import com.googlecode.javacpp.BytePointer;
 import com.googlecode.javacv.cpp.opencv_core;
+import com.googlecode.javacv.cpp.opencv_features2d.PatchGenerator;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
+import com.googlecode.javacv.cpp.opencv_features2d;
 
-import java.util.List;
+import static com.googlecode.javacv.cpp.opencv_imgproc.CV_GAUSSIAN;
+import static com.googlecode.javacv.cpp.opencv_imgproc.cvSmooth;
+
+
+import java.util.*;
 
 /**
  *
  */
 public class Fern {
+    private static final Random rand = new Random();
+    private static final double[] SCALES = { 0.16151,0.19381,0.23257,0.27908,0.33490,
+                                             0.40188,0.48225,0.57870,0.69444,0.83333,
+                                             1.00000,1.20000,1.44000,1.72800,2.07360,
+                                             2.48832,2.98598,3.58318,4.29982,5.15978,6.19174 };
+    //scaledWindows
 
-    //init
-    public void init(IplImage initialImage,
-                     List<ScanningBoundingBoxes> possibleBB,
-                     float[][] features ) {
-        int imageWidth  = initialImage.width();
-        int imageHeight = initialImage.height();
-        int numTrees    = features.length;
-
-        //TODO: make features an object and ensure proper size/shape
-        int numFeatures = (features.length * features[0].length ) / 4;
+    private final PatchGenerator generator;
+    private final opencv_core.CvRNG rng = new opencv_core.CvRNG();
 
 
+    //[Scale][numFerns*featuresPerFern]  since we want to recognize the object at multiple scales
+    private final Feature[][] features;
+    //private final List<int[]> positiveFeatures = new ArrayList<int[]>();
+    //private final List<int[]> negativeFeatures = new ArrayList<int[]>();
+    private float negativeThreshold;
+    private float positiveThreshold;
+    private final int numFerns;
+    private final int featuresPerFern;
+    private final int numWarps = 10;
+
+    //[Per Fern][2^features per fern]
+    //the 2^features is because we test for the presense or absense which is just a binary number
+    //so we need to represent all possible combinations of features
+    private final int[][]     positiveCounter;
+    private final int[][]     negativeCounter;
+    private final float[][]   posteriors;
+
+    public Fern (int numFerns, int featuresPerFern, IplImage initialImage, BoundingBox initialBox,
+                 List<ScanningBoundingBoxes> scanningBoundingBoxesList, List<ScaledBoundingBox> bestBoxes,
+                 List<ScaledBoundingBox> variedWorstOverlaps) {
+        //Various scaling factors of the initialBB
+        this.numFerns           = numFerns;
+        this.negativeThreshold  = 0.5f*numFerns;
+        this.negativeThreshold  = 0.5f*numFerns;
+        this.featuresPerFern    = featuresPerFern;
+        int totalFeatures       = numFerns * featuresPerFern;
+        this.features           = new Feature[SCALES.length][totalFeatures];
+
+        //GENERATE THE FEATURES
+        float width  = initialBox.getWidth();
+        float height = initialBox.getHeight();
+        for( int x=0;x<totalFeatures;x++) {
+            //Same feature but at different scales
+            float rand1 = rand.nextFloat();
+            float rand2 = rand.nextFloat();
+            float rand3 = rand.nextFloat();
+            float rand4 = rand.nextFloat();
+
+            //Features at different scales
+            for( int y=0;y<SCALES.length;y++) {
+                Feature feature = new Feature( (int)(width * rand1),
+                                               (int)(height * rand2),
+                                               (int)(width * rand3),
+                                               (int)(height * rand4)  );
+                features[y][x] = feature;
+            }
+        }
+
+
+
+        positiveCounter = new int[numFerns][(int)Math.pow(2,featuresPerFern)];
+        negativeCounter = new int[numFerns][(int)Math.pow(2,featuresPerFern)];
+        posteriors      = new float[numFerns][(int)Math.pow(2,featuresPerFern)];
+
+
+        opencv_features2d.LDetector unusedBugWorkAround = new opencv_features2d.LDetector();
+        generator = new opencv_features2d.PatchGenerator(0.0, //background min
+                                                        0.0, //background max
+                                                        5.0,  //noise range
+                                                        true, //random blur
+                                                        1.0-0.02,//lambda (min scaling)
+                                                        1.0+0.02,//max scaling
+                                                        -20.0*Math.PI/180.0, //theta
+                                                        20.0*Math.PI/180.0,
+                                                        -20.0*Math.PI/180.0, //phi
+                                                        20.0*Math.PI/180.0);
+
+
+        initFirst(initialImage, bestBoxes, variedWorstOverlaps);
+        System.out.println("foo");
+    }
+
+    public void train( IplImage image,
+                       BoundingBox boundingBox,
+                       List<ScaledBoundingBox> bestOverlaps,
+                       List<ScaledBoundingBox> worstOverlaps ) {
+        initFirst( image, bestOverlaps, worstOverlaps );
+    }
+
+
+
+    @SuppressWarnings ({"unchecked"})
+    public void initFirst(IplImage image, List<ScaledBoundingBox> bestBoxes, List<ScaledBoundingBox> worstBoxes ) {
+        BoundingBox hullBox          = BoundingBox.getHullBox( (List)bestBoxes );
+        List<int[]> positiveFeatures = new ArrayList<int[]>();
+        List<int[]> negativeFeatures = new ArrayList<int[]>();
+
+
+        //source image as blurred image to start?
+        IplImage    patch    = null;
+        //IplImage    smoothed = null;
+
+        //cvSmooth()
+        //BUGBUG WE are being destructive...
+        cvSmooth( image, image , CV_GAUSSIAN, 9,9, 1.5, 1.5 );
+        
+
+//TODO: We want to morph inside the hull on the original image..  BUT then
+//use the best boxes in the classifier
+
+//        patch = Utils.getImagePatch(image, hullBox);
+//        for( int x=0;x<numWarps;x++) {
+//
+//            //first image is unwarped
+//            if( x>0) {
+//                //Randomly warp into a new patch
+//                //TODO: This may be wrong.. we may want to generate it to specific box size?
+//                generator.generate( image, hullBox.getCenter(), patch, hullBox.getSize(), rng );
+//            }
+//
+//            for(ScaledBoundingBox box : bestBoxes ) {
+//                //TODO: This may be wrong.. we may want to generate it to specific box size?
+//                positiveFeatures.add(getFeatures( patch, box.scaleIndex ) );
+//            }
+//        }
+
+        patch = Utils.getImagePatch(image, bestBoxes.get(0) );
+        for( int x=0;x<10*numWarps;x++) {
+
+
+            //first image is unwarped
+            if( x>0) {
+                //Randomly warp into a new patch
+                //TODO: This may be wrong.. we may want to generate it to specific box size?
+                generator.generate( image, bestBoxes.get(0).getCenter(), patch, bestBoxes.get(0).getSize(), rng );
+            }
+            positiveFeatures.add(getFeatures( patch, bestBoxes.get(0).scaleIndex ) );
+        }
+
+        for(ScaledBoundingBox box : worstBoxes ) {
+            IplImage badImage = Utils.getImagePatch( image, box );
+            negativeFeatures.add(getFeatures( badImage, box.scaleIndex ) );
+            //TODO: free badImage
+        }
+        train( positiveFeatures, negativeFeatures );
+    }
+
+    /**
+     * Look at an image and find the features
+     * @param image
+     * @param scaleIndex The scale that we are getting features at.
+     * @return One Fern per numFerns
+     */
+    public int[] getFeatures( IplImage image, int scaleIndex ) {
+        int[] ferns = new int[this.numFerns];
+        int fern = 0;
+        for( int x=0;x<numFerns;x++) {
+            fern = 0;
+            for( int y=0;y<this.featuresPerFern;y++) {
+                fern <<= 1;
+                fern |= features[scaleIndex][x*this.featuresPerFern+y].eval(image);
+            }
+            ferns[x] = fern;
+        }
+        return( ferns );
+    }
+
+    /**
+     * Given ferns, and each ferns posterior probability, ADD together the votes
+     *  I think we add since this is SEMI-naive and each fern is independent
+     * @param ferns
+     * @return
+     */
+    public float measureVotes( int[] ferns ) {
+        float votes = 0f;
+        for( int x=0;x<numFerns;x++) {
+            votes += posteriors[x][ferns[x]];
+        }
+        return( votes );
+    }
+
+    public void updatePosterior(boolean isPositive, int[] ferns ){
+
+          //In Bayes' theorem, P(A), the prior, is the initial degree of belief in proposition A. P(A | B),
+          // the posterior, is the degree of belief having accounted for evidence B.
+          // P(B | A) / P(B) represents the support B provides for A.
+        int index = 0;
+
+        for( int x=0;x<numFerns;x++) {
+            index = ferns[x];
+
+            if( isPositive ) {
+                positiveCounter[x][index]++;
+            }else {
+                negativeCounter[x][index]++;
+            }
+
+            if( positiveCounter[x][index] == 0 ){
+                posteriors[x][index]=0;
+            }else{
+                posteriors[x][index]= (float)positiveCounter[x][index]/(float)(positiveCounter[x][index] + negativeCounter[x][index]);
+            }
+        }
+    }
+
+    public void train( List<int[]> positiveFeatures, List<int[]> negativeFeatures ){
+        Set<int[]> negativo = new HashSet<int[]>();
+        for( int[] neg : negativeFeatures ) {
+            negativo.add( neg );
+        }
+        List<int[]> foo = new ArrayList<int[]>();
+        foo.addAll( negativeFeatures );
+        foo.addAll( positiveFeatures );
+        Collections.shuffle( foo );
+
+        for( int[] sample : foo ) {
+            if( negativo.contains( sample ) ) {
+                updatePosterior( false, sample );
+            }else {
+                updatePosterior( true, sample );
+            }
+        }
+    }
+
+    public void dump() {
+        for( int x=0;x<posteriors.length;x++) {
+            for( int y=0;y<posteriors[x].length;y++) {
+                if( posteriors[x][y] != 0.0 ) {
+                    System.out.println("Got: " +x + " " + y + " :" + posteriors[x][y] );
+                }
+            }
+        }
     }
 
     public void getFernPatterns (IplImage fooImage, List<BoundingBox> closestList, int variance) {
         //To change body of created methods use File | Settings | File Templates.
+    }
+
+    public class Feature {
+        public final int x1;
+        public final int y1;
+        public final int x2;
+        public final int y2;
+
+        public Feature (int x1, int y1, int x2, int y2) {
+            this.x1 = x1;
+            this.y1 = y1;
+            this.x2 = x2;
+            this.y2 = y2;
+        }
+
+        /**
+         * Evaluate the feature on the given image.
+         * @param image
+         * @return 0 or 1
+         */
+        public int eval (IplImage image) {
+            int         widthStep = image.widthStep();
+            BytePointer imageData = image.imageData();
+            return( (imageData.get(widthStep*y1+x1) > imageData.get(widthStep*y2+x2))?1:0 );
+        }
     }
 }

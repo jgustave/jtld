@@ -1,10 +1,8 @@
 package com.gong.jtld.test;
 
 import com.gong.jtld.*;
-import com.googlecode.javacv.cpp.opencv_core;
-import com.googlecode.javacv.cpp.opencv_features2d;
 
-import java.util.*;
+import java.util.List;
 
 import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_highgui.*;
@@ -13,54 +11,8 @@ import static com.googlecode.javacv.cpp.opencv_highgui.*;
  * DYLD_FALLBACK_LIBRARY_PATH=/opt/local/lib/
  * ffmpeg -qscale 5 -r 5 -b 9600 -i imageout-%05d.png movie.mp4
  */
-public class TestInit {
+public class TestRun {
 
-
-    /**
-     *
-     * @param initialImage Gray scale
-     * @param overlaps 0/1 how much does each overlap initial BB.
-     */
-    private static void initalPositive( IplImage initialImage,
-                                        List<ScanningBoundingBoxes> boundingBoxeses,
-                                        float[] overlaps ) {
-
-        //get index/bb that has highest overlap
-        //I don't know why we need to standardize on BB's
-        BoundingBox bestBox = null;
-
-
-
-        //Get BB's that overlap > 0.6 .. Get (sorted) max p_par.num_closest
-        //also sent to fern later
-
-        //get a bounding box/convex hull that covers all of the 0.6 overlap
-
-        //get the specific columns and rows in the hull, and make a BB.
-        BoundingBox similarBox;
-
-        List<ScanningBoundingBoxes> similarBoundingBoxes;
-
-        //pEx
-        List<float[]> PositiveExamplePatterns;
-        //getPattern( initialImage, bestBox, PATCHSIZE )
-        //TODO: can also get the mirror image. (two patterns)
-
-        //Now we will stretch/mangle the
-        //to generate other similar positive patterns.
-        int NUM_WARPS = 20;
-        for( int x=0;x<NUM_WARPS;x++) {
-
-        }
-
-        //opencv_features2d.PatchGenerator pg = new opencv_features2d.PatchGenerator();
-
-
-
-
-
-
-    }
 
     public static void main( String[] args ){
         System.out.println("Helloo!");
@@ -70,53 +22,42 @@ public class TestInit {
         Tracker                     tracker             = new Tracker();
         BoundingBox                 boundingBox         = new BoundingBox(300,30,335,105);
         BoundingBox                 updatedBoundingBox  = new BoundingBox(300,30,335,105);
-        List<ScanningBoundingBoxes> testBoundingBoxes   = null;
+
         TrackerResult               result              = null;
-        int                         patchSize           = 25;
+        //int                         patchSize           = 25;
         CvFont                      font                = new CvFont(CV_FONT_HERSHEY_PLAIN, 1.0, 1);
-        NearestNeighbor             nearestNeighbor     = null;
+        //NearestNeighbor             nearestNeighbor     = null;
 
         IplImage currentGray = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00005.png", CV_LOAD_IMAGE_GRAYSCALE);
         IplImage nextGray    = null;
         IplImage next        = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00005.png", CV_LOAD_IMAGE_UNCHANGED);
 
-        //Get all possible BB's used in scanning the image for matches.
-        testBoundingBoxes = BoundingBox.createTestBoxes( boundingBox,
-                                                         Jtdl.SCALES,
-                                                         currentGray.width(),
-                                                         currentGray.height(),
-                                                         24 );
-        nearestNeighbor   = new NearestNeighbor( testBoundingBoxes, patchSize );
+
+        Jtdl jtdl = new Jtdl(currentGray, boundingBox );
+        NearestNeighbor nearestNeighbor = jtdl.nearestNeighbor;
+        List<ScanningBoundingBoxes> testBoundingBoxes   = jtdl.scanningBoundingBoxesList;
+
+//
+//        //jtdl.fern.dump();
+//        System.out.println("Searching...");
+//        double best = 0.0;
+//        for( ScanningBoundingBoxes boxes : jtdl.scanningBoundingBoxesList ) {
+//            for( ScaledBoundingBox scaledBox : boxes.boundingBoxes ) {
+//                IplImage patch = Utils.getImagePatch( test, scaledBox );
+//                int[] features = jtdl.fern.getFeatures( patch, scaledBox.scaleIndex );
+//                float value = jtdl.fern.measureVotes( features );
+//                if( value > 0.0 ) {
+//                    NearestNeighbor.Foo foo = jtdl.nearestNeighbor.getFoo(test, scaledBox );
+//                    if( foo.relativeSimilarity > best ) {
+//                        best = foo.relativeSimilarity;
+//                        System.out.println("Votes:" + value + " " + foo.relativeSimilarity );
+//                        cvSaveImage("/tmp/found-"+ scaledBox + "-v-" + value + ".png", patch);
+//                    }
+//                }
+//            }
+//        }
 
 
-        //Generate Features used by Fern.. Random now.. but there are many better alg.
-        //float[][] features = FeatureGenerator.generateFeatures(6, 23);
-
-        //These are used by Nearest Neighbor
-
-
-        List<BoundingBox> bestOverlaps  = Utils.getBestOverlappingScanBoxes( boundingBox,
-                                                                             testBoundingBoxes,
-                                                                             10,
-                                                                             0.6f );
-        List<BoundingBox> worstOverlaps = Utils.getWorstOverlappingScanBoxes( boundingBox,
-                                                                              testBoundingBoxes,
-                                                                              100,
-                                                                              0.2f );
-
-
-        nearestNeighbor.init( currentGray, bestOverlaps, worstOverlaps );
-
-
-
-        //Draw initial bounding box. on first image
-        cvRectangle( next,
-                     cvPoint(Math.round(updatedBoundingBox.x1),
-                             Math.round(updatedBoundingBox.y1)),
-                     cvPoint(Math.round(updatedBoundingBox.x2),
-                             Math.round(updatedBoundingBox.y2)),
-                     CV_RGB(0, 255, 0), 1, 8, 0);
-        cvSaveImage("/tmp/imageout-00001.png", next );
 
 
         int outputImageNo = 2;
@@ -158,17 +99,9 @@ public class TestInit {
 
 
                 if( !boundingBox.isOutsideImage(nextGray) ) {
-                    bestOverlaps  = Utils.getBestOverlappingScanBoxes( updatedBoundingBox,
-                                                                       testBoundingBoxes,
-                                                                       10,
-                                                                       0.6f );
-                    worstOverlaps = Utils.getWorstOverlappingScanBoxes( updatedBoundingBox,
-                                                                        testBoundingBoxes,
-                                                                        100,
-                                                                        0.2f );
-
-                    nearestNeighbor.init( nextGray, bestOverlaps, worstOverlaps );
-                    System.out.println("Status:" + nearestNeighbor.getStatus() );
+                    //TODO: update data
+                    jtdl.learn( nextGray, updatedBoundingBox );
+                    //System.out.println("Status:" + nearestNeighbor.getStatus() );
                 }
 
             }else {
@@ -206,6 +139,26 @@ public class TestInit {
             cvSaveImage("/tmp/imageout-" + outStr + ".png", next);
             outputImageNo++;
         }
+
+        System.out.println("Searching...");
+        IplImage test        = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00001.png", CV_LOAD_IMAGE_GRAYSCALE);
+        double best = 0.0;
+        for( ScanningBoundingBoxes boxes : jtdl.scanningBoundingBoxesList ) {
+            for( ScaledBoundingBox scaledBox : boxes.boundingBoxes ) {
+                IplImage patch = Utils.getImagePatch( test, scaledBox );
+                int[] features = jtdl.fern.getFeatures( patch, scaledBox.scaleIndex );
+                float value = jtdl.fern.measureVotes( features );
+                if( value > 0.0 ) {
+                    NearestNeighbor.Foo foo = jtdl.nearestNeighbor.getFoo(test, scaledBox );
+                    if( foo.relativeSimilarity > best ) {
+                        best = foo.relativeSimilarity;
+                        System.out.println("Votes:" + value + " " + foo.relativeSimilarity );
+                        cvSaveImage("/tmp/found-"+ scaledBox + "-v-" + value + "-s-" + best + ".png", patch);
+                    }
+                }
+            }
+        }
+
 
     }
 

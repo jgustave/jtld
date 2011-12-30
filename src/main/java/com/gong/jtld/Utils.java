@@ -1,13 +1,12 @@
 package com.gong.jtld;
 
 import com.googlecode.javacv.cpp.opencv_core.CvMat;
+import com.googlecode.javacv.cpp.opencv_features2d;
 import com.googlecode.javacv.cpp.opencv_imgproc;
 import org.apache.commons.math.stat.descriptive.rank.Median;
 
 import java.nio.*;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_imgproc.*;
@@ -557,8 +556,8 @@ public class Utils {
      * @param patches
      * @return
      */
-    public static float[] normalizedCorrelation( float[] mainPatch, List<float[]> patches ) {
-        float[] result = new float[patches.size()];
+    public static double[] normalizedCorrelation( float[] mainPatch, List<float[]> patches ) {
+        double[] result = new double[patches.size()];
         for( int x=0;x<patches.size();x++) {
             result[x] = normalizedCorrelation(mainPatch, patches.get(x));
         }
@@ -570,7 +569,7 @@ public class Utils {
      * @param patch2
      * @return
      */
-    public static float normalizedCorrelation( float[] patch1, float[] patch2 ) {
+    public static double normalizedCorrelation( float[] patch1, float[] patch2 ) {
 
         double correlation = 0;
         double norm1       = 0;
@@ -581,12 +580,14 @@ public class Utils {
         }
 
         for( int x=0;x<patch1.length;x++) {
-            correlation += patch1[x] * patch2[x];
-            norm1 += patch1[x] * patch1[x];
-            norm2 += patch2[x] * patch2[x];
+            correlation += (double)patch1[x] * (double)patch2[x];
+            norm1 += (double)patch1[x] * (double)patch1[x];
+            norm2 += (double)patch2[x] * (double)patch2[x];
         }
+        //opencv_features2d.SiftDescriptorExtractor fl;
+        //fl.compute();
 
-        return( (float) (((correlation / Math.sqrt(norm1*norm2)) + 1) / 2.0) );
+        return( (((correlation / Math.sqrt(norm1*norm2)) + 1.0) / 2.0) );
     }
 
     public static float max (float[] vals) {
@@ -607,5 +608,99 @@ public class Utils {
             }
         }
         return( max );
+    }
+    public static double max (double[] vals) {
+        double max = vals[0];
+        for( double val : vals ) {
+            if( val > max ) {
+                max = val;
+            }
+        }
+        return( max );
+    }
+    public static double max (double[] vals, int limit) {
+        double max = vals[0];
+        for( int x=0;x<limit;x++) {
+            double val = vals[x];
+            if( val > max ) {
+                max = val;
+            }
+        }
+        return( max );
+    }
+
+    /**
+     * Get the N+1 most overlapping BB's.. +1 for the best.. and N for the rest.
+     * @param boundingBox
+     * @param testBoundingBoxes
+     * @return
+     */
+    public static List<BoundingBox> getBestOverlappingScanBoxes( BoundingBox boundingBox,
+                                                                 List<ScanningBoundingBoxes> testBoundingBoxes,
+                                                                 int maxBoxes,
+                                                                 float minCutoff ) {
+
+        //BUGBUG: This isn't strictly correct... need to handle duplicate overlaps
+        TreeMap<Float,BoundingBox> closestMap = new TreeMap<Float, BoundingBox>();
+
+        //Look at every Scan.BB
+        for(ScanningBoundingBoxes boxes : testBoundingBoxes ) {
+            for( BoundingBox box : boxes.boundingBoxes ) {
+                float overlap = boundingBox.overlap(box);
+                if( overlap > minCutoff ) {
+                    closestMap.put( overlap, box );
+                }
+            }
+        }
+
+        List<BoundingBox> closestList = new ArrayList<BoundingBox>();
+        for( int x=0;x<maxBoxes;x++) {
+            if( closestMap.size() == 0 ) {
+                break;
+            }
+            closestList.add( closestMap.pollFirstEntry().getValue() );
+        }
+
+        return( closestList );
+    }
+
+    public static List<BoundingBox> getWorstOverlappingScanBoxes (BoundingBox boundingBox,
+                                                                   List<ScanningBoundingBoxes> testBoundingBoxes,
+                                                                   int maxResults,
+                                                                   float maxCutoff ) {
+
+        //BUGBUG: This isn't strictly correct... need to handle duplicate overlaps
+        TreeMap<Float,BoundingBox> closestMap = new TreeMap<Float, BoundingBox>();
+
+        //Look at every Scan.BB
+        for(ScanningBoundingBoxes boxes : testBoundingBoxes ) {
+            for( BoundingBox box : boxes.boundingBoxes ) {
+                float overlap = boundingBox.overlap(box);
+                if( overlap < maxCutoff ) {
+                    closestMap.put( overlap, box );
+                }
+            }
+        }
+
+        List<BoundingBox> worstList = new ArrayList<BoundingBox>();
+        for( int x=0;x<maxResults;x++) {
+            if( closestMap.size() == 0 ) {
+                break;
+            }
+            worstList.add(closestMap.pollFirstEntry().getValue());
+        }
+        Collections.shuffle( worstList );
+
+        return( worstList.subList(0, Math.min(maxResults,worstList.size() ) ) );
+    }
+
+    public static float min (float[] vals) {
+        float min = vals[0];
+        for( float val : vals ) {
+            if( val < min ) {
+                min = val;
+            }
+        }
+        return( min );
     }
 }
