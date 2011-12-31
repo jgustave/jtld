@@ -6,6 +6,9 @@ import com.googlecode.javacv.cpp.opencv_features2d.PatchGenerator;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 import com.googlecode.javacv.cpp.opencv_features2d;
 
+import static com.googlecode.javacv.cpp.opencv_core.cvCopy;
+import static com.googlecode.javacv.cpp.opencv_core.cvResetImageROI;
+import static com.googlecode.javacv.cpp.opencv_core.cvSetImageROI;
 import static com.googlecode.javacv.cpp.opencv_imgproc.CV_GAUSSIAN;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvSmooth;
 
@@ -121,46 +124,41 @@ public class Fern {
 
         //cvSmooth()
         //BUGBUG WE are being destructive...
-        cvSmooth( image, image , CV_GAUSSIAN, 9,9, 1.5, 1.5 );
-        
+        cvSmooth( image, image, CV_GAUSSIAN, 9,9, 1.5, 1.5 );
 
-//TODO: We want to morph inside the hull on the original image..  BUT then
-//use the best boxes in the classifier
 
-//        patch = Utils.getImagePatch(image, hullBox);
-//        for( int x=0;x<numWarps;x++) {
-//
-//            //first image is unwarped
-//            if( x>0) {
-//                //Randomly warp into a new patch
-//                //TODO: This may be wrong.. we may want to generate it to specific box size?
-//                generator.generate( image, hullBox.getCenter(), patch, hullBox.getSize(), rng );
-//            }
-//
-//            for(ScaledBoundingBox box : bestBoxes ) {
-//                //TODO: This may be wrong.. we may want to generate it to specific box size?
-//                positiveFeatures.add(getFeatures( patch, box.scaleIndex ) );
-//            }
+//This morph doesn't work as well...
+//        patch = image.clone();
+//        for( int x=0;x<10*numWarps;x++) {
+//            cvSetImageROI( patch, hullBox.getRect() );
+//            generator.generate( image, hullBox.getCenter(), patch, hullBox.getSize(), rng );
+//            cvSetImageROI( patch, bestBoxes.get(0).getRect() );
+//            positiveFeatures.add( getFeatures( patch, bestBoxes.get(0).scaleIndex ) );
 //        }
 
+
         patch = Utils.getImagePatch(image, bestBoxes.get(0) );
-        for( int x=0;x<10*numWarps;x++) {
-
-
+        for( int x=0;x<numWarps;x++) {
             //first image is unwarped
             if( x>0) {
                 //Randomly warp into a new patch
-                //TODO: This may be wrong.. we may want to generate it to specific box size?
-                generator.generate( image, bestBoxes.get(0).getCenter(), patch, bestBoxes.get(0).getSize(), rng );
+                generator.generate( image,
+                                    bestBoxes.get(0).getCenter(),
+                                    patch,
+                                    bestBoxes.get(0).getSize(),
+                                    rng );
             }
             positiveFeatures.add(getFeatures( patch, bestBoxes.get(0).scaleIndex ) );
         }
+        //TODO: free patch
+
 
         for(ScaledBoundingBox box : worstBoxes ) {
-            IplImage badImage = Utils.getImagePatch( image, box );
-            negativeFeatures.add(getFeatures( badImage, box.scaleIndex ) );
-            //TODO: free badImage
+            //IplImage badImage = Utils.getImagePatch( image, box );
+            cvSetImageROI( image, box.getRect() );
+            negativeFeatures.add(getFeatures( image, box.scaleIndex ) );
         }
+        cvResetImageROI( image );
         train( positiveFeatures, negativeFeatures );
     }
 
@@ -183,6 +181,19 @@ public class Fern {
         }
         return( ferns );
     }
+//    public int[] getFeatures( IplImage image, ScaledBoundingBox boundingBox ) {
+//        int[] ferns = new int[this.numFerns];
+//        int fern = 0;
+//        for( int x=0;x<numFerns;x++) {
+//            fern = 0;
+//            for( int y=0;y<this.featuresPerFern;y++) {
+//                fern <<= 1;
+//                fern |= features[boundingBox.getScaleIndex()][x*this.featuresPerFern+y].eval(image);
+//            }
+//            ferns[x] = fern;
+//        }
+//        return( ferns );
+//    }
 
     /**
      * Given ferns, and each ferns posterior probability, ADD together the votes

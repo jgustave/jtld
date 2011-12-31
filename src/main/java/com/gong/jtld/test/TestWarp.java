@@ -50,23 +50,30 @@ public class TestWarp {
                                                         -20.0*Math.PI/180.0, //phi
                                                         20.0*Math.PI/180.0);
 
+        //cvSetImageROI( currentGray, boundingBox.getRect() );
         cvSaveImage("/tmp/prewarp.png", currentGray);
         //currentGray.
         CvRNG rng = new CvRNG();
-        IplImage warpPatch = IplImage.create( boundingBox.getSize(),8,1);
+        IplImage warpPatch = currentGray.clone();
 
         for( int x=0;x<10;x++) {
+
+            //cvResetImageROI( warpPatch );
+            cvSetImageROI( warpPatch, boundingBox.getRect() );
+
             generator.generate( currentGray, boundingBox.getCenter(), warpPatch, boundingBox.getSize(), rng );
-            cvSetImageROI( currentGray, boundingBox.getRect() );
-            cvCopy( warpPatch, currentGray);
-            cvResetImageROI( currentGray );
+//            cvSetImageROI( currentGray, boundingBox.getRect() );
+//            cvCopy( warpPatch, currentGray);
+//            cvResetImageROI( currentGray );
+            cvResetImageROI( warpPatch );
+            cvSaveImage("/tmp/warp"+x+".png", warpPatch );
         }
 
 
         //currentGray.c
 //        generator.generate( currentGray, boundingBox.getCenter(), currentGray, boundingBox.getSize(), rng );
 //        generator.generate( currentGray, boundingBox.getCenter(), currentGray, boundingBox.getSize(), rng );
-        cvSaveImage("/tmp/warp1.png", currentGray);
+
 
 
 //
