@@ -16,10 +16,17 @@ public class NearestNeighbor {
 
     private final List<ScanningBoundingBoxes> scanningBoundingBoxeses;
     private final int patchSize;
+    private       double validThreshold    = 0.65;
+    private       double positiveThreshold = 0.60;
+    private       double negativeThreshold = 0.5;
 
     public NearestNeighbor(List<ScanningBoundingBoxes> scanBoxes, int patchSize ) {
         this.scanningBoundingBoxeses = scanBoxes;
         this.patchSize = patchSize;
+    }
+
+    public double getValidThreshold () {
+        return validThreshold;
     }
 
     public void init (IplImage image, List<BoundingBox> bestOverlaps, List<BoundingBox> worstOverlaps) {
@@ -53,7 +60,7 @@ public class NearestNeighbor {
                     //dump( "Positive:" + this.positivePatchPatterns.size(), patch );
                 } else {
                     Foo foo = getFoo(patch);
-                    if( foo.relativeSimilarity <= 0.65 ) {
+                    if( foo.relativeSimilarity <= positiveThreshold ) {
                         this.positivePatchPatterns.add( patch );
                         //dump( "Positive-" + foo.relativeSimilarity +"-" + this.positivePatchPatterns.size(), patch );
                     }
@@ -64,7 +71,7 @@ public class NearestNeighbor {
                     //dump( "Negative:" + this.positivePatchPatterns.size(), patch );
                 }else {
                     Foo foo = getFoo(patch);
-                    if( foo.relativeSimilarity > 0.5 ) {
+                    if( foo.relativeSimilarity > negativeThreshold ) {
                         //dump( "Negative-" + foo.relativeSimilarity + "-" + this.negativePatchPatterns.size(), patch );
                         this.negativePatchPatterns.add( patch );
                     }
@@ -73,79 +80,19 @@ public class NearestNeighbor {
         }
     }
 
-//
-//    public void init (IplImage image, List<BoundingBox> bestOverlaps, List<BoundingBox> worstOverlaps) {
-//
-//
-//        //List<Map<IplImage,float[]>
-//        //List<Map>
-//        Map<float[],IplImage>  positivePatchPatterns = getPositivePatchPatternsDebug( image, bestOverlaps.get(0), patchSize );
-//        Map<float[],IplImage>  negativePatchPatterns = getNegativePatchPatternsDebug( image, worstOverlaps, patchSize );
-//
-//        Set<float[]> positives = new HashSet<float[]>();
-//        positives.addAll( positivePatchPatterns.keySet() );
-//
-//        List<float[]> patches = new ArrayList<float[]>();
-//        patches.addAll( positivePatchPatterns.keySet() );
-//        patches.addAll( negativePatchPatterns.keySet() );
-//        Collections.shuffle( patches );
-//        //important to have positive first to init
-//        patches.add(0,positivePatchPatterns.keySet().iterator().next() );
-//
-//        for( float[] patch : patches ) {
-//
-//
-//            //Since we know the patch is apriori a Positive or Negative patch..
-//            //AND we look at the Similarity (0 being similar to a negative, 1 being similar to a positive)
-//            //We say: If it's a Positive Patch, but more similar to a negative patch.. we want to add it to
-//            //the collection. (and vv)
-//            if( positives.contains(patch) ) {
-//                if( this.positivePatchPatterns.size() == 0 ) {
-//                    this.positivePatchPatterns.add( patch );
-//                    dump( "Positive:" + this.positivePatchPatterns.size(), positivePatchPatterns.get(patch) );
-//                } else {
-//                    Foo foo = getFoo(patch);
-//                    if( foo.relativeSimilarity <= 0.65 ) {
-//                        this.positivePatchPatterns.add( patch );
-//                        dump( "Positive-" + foo.relativeSimilarity +"-" + this.positivePatchPatterns.size(), positivePatchPatterns.get(patch) );
-//                    }
-//                }
-//            }else { //assume negativePatch
-//                if( this.negativePatchPatterns.size() == 0 ) {
-//                    this.negativePatchPatterns.add( patch );
-//                    dump( "Negative:" + this.positivePatchPatterns.size(), negativePatchPatterns.get(patch) );
-//                }else {
-//                    Foo foo = getFoo(patch);
-//                    if( foo.relativeSimilarity > 0.5 ) {
-//                        dump( "Negative-" + foo.relativeSimilarity + "-" + this.negativePatchPatterns.size(), negativePatchPatterns.get(patch) );
-//                        this.negativePatchPatterns.add( patch );
-//                    }
-//                }
-//            }
-//        }
-//    }
 
+    public void updateNearestNeighborThreshold(List<float[]> negativePatches ) {
+        for (float[] negativePatch : negativePatches) {
+            NearestNeighbor.Foo foo = getFoo(negativePatch);
+            if( foo.relativeSimilarity > positiveThreshold ) {
+                positiveThreshold =  foo.relativeSimilarity;
+            }
+        }
 
-//
-//    private void dump(String msg, IplImage image ) {
-//
-////        IplImage dest = cvCreateImage( cvSize(patchSize,
-////                                              patchSize),
-////                                       8,
-////                                       1 );
-////        BytePointer data = dest.imageData();
-////        float min = Utils.min( pattern );
-////
-////        for(float val : pattern ) {
-////            data.put((byte)(val - min) );
-////        }
-////
-////        cvSaveImage("/tmp/"+msg+".png", dest);
-////        cvReleaseImage( dest );
-//        cvSaveImage("/tmp/"+msg+".png", image );
-//
-//    }
-//
+        if( positiveThreshold > validThreshold ) {
+            validThreshold =  positiveThreshold;
+        }
+    }
 
     private static List<float[]> getPositivePatchPatterns ( IplImage image,
                                                             BoundingBox bestBox,
@@ -165,27 +112,7 @@ public class NearestNeighbor {
                                            Utils.Y_FLIP) );
         return( result );
     }
-//    private static Map<float[],IplImage> getPositivePatchPatternsDebug ( IplImage image,
-//                                                                        BoundingBox bestBox,
-//                                                                        int patternSize ) {
-//        Map<float[],IplImage> temp = new LinkedHashMap<float[], IplImage>();
-//
-//        temp.put( Utils.getPatchPattern( image,
-//                                         bestBox,
-//                                         patternSize ),
-//                  Utils.getImagePatch( image, bestBox, Utils.NO_FLIP ) );
-//        temp.put( Utils.getPatchPattern( image,
-//                                         bestBox,
-//                                         patternSize,
-//                                         Utils.X_FLIP),
-//                  Utils.getImagePatch( image, bestBox, Utils.X_FLIP ) );
-//        temp.put( Utils.getPatchPattern( image,
-//                                         bestBox,
-//                                         patternSize,
-//                                         Utils.Y_FLIP),
-//                  Utils.getImagePatch( image, bestBox, Utils.Y_FLIP ) );
-//        return(temp);
-//    }
+
 
     private static List<float[]> getNegativePatchPatterns (IplImage image,
                                                            List<BoundingBox> worstOverlaps,
@@ -199,20 +126,6 @@ public class NearestNeighbor {
         }
         return( result );
     }
-//
-//    private static Map<float[],IplImage> getNegativePatchPatternsDebug (IplImage image,
-//                                                                        List<BoundingBox> worstOverlaps,
-//                                                                        int patternSize ) {
-//        Map<float[],IplImage> temp = new HashMap<float[], IplImage>();
-//
-//        for( BoundingBox box : worstOverlaps ) {
-//            temp.put(Utils.getPatchPattern( image,
-//                                            box,
-//                                            patternSize ),
-//                     Utils.getImagePatch( image, box ) );
-//        }
-//        return( temp );
-//    }
 
     public Foo getFoo( float[] patch ) {
 

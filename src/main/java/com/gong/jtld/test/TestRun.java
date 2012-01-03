@@ -75,7 +75,7 @@ public class TestRun {
             int[] validIndexes = Tracker.getValidIndexes(result);
 
             if( validIndexes.length > 0 ) {
-                updatedBoundingBox = Tracker.predictBoundingBox(boundingBox, result, validIndexes);
+                updatedBoundingBox = Tracker.predictBoundingBox( boundingBox, result, validIndexes);
 
                 foo = nearestNeighbor.getFoo( nextGray, updatedBoundingBox );
                 BoundingBox fakeBox = new BoundingBox(10,
@@ -89,7 +89,6 @@ public class TestRun {
                                cvPoint(30,90),
                                font,
                                CV_RGB(10, 10, 10) );
-
                 }
                 cvPutText( next,
                            "" + foo.relativeSimilarity ,

@@ -1,18 +1,20 @@
 package com.gong.jtld.test;
 
 import com.gong.jtld.BoundingBox;
-import com.gong.jtld.Fern;
 import com.gong.jtld.ScanningBoundingBoxes;
-import com.gong.jtld.Utils;
-import com.googlecode.javacv.cpp.opencv_features2d;
 
+import com.googlecode.javacv.cpp.opencv_features2d;
+import static com.googlecode.javacv.cpp.opencv_core.cvAvgSdv;
+import static com.googlecode.javacv.cpp.opencv_core.CvScalar;
+
+
+import java.nio.FloatBuffer;
 import java.util.*;
 
 import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_highgui.*;
-import static com.googlecode.javacv.cpp.opencv_highgui.cvShowImage;
-import static com.googlecode.javacv.cpp.opencv_highgui.cvWaitKey;
 import static com.googlecode.javacv.cpp.opencv_imgproc.CV_GAUSSIAN;
+import static com.googlecode.javacv.cpp.opencv_imgproc.cvIntegral;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvSmooth;
 
 /**
@@ -22,8 +24,9 @@ import static com.googlecode.javacv.cpp.opencv_imgproc.cvSmooth;
 public class TestWarp {
 
 
-
     public static void main( String[] args ){
+
+
         System.out.println("Helloo!");
         System.out.println("Path:" + System.getProperty("java.library.path") );
 
@@ -33,10 +36,40 @@ public class TestWarp {
 
         IplImage currentGray = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00005.png", CV_LOAD_IMAGE_GRAYSCALE);
         //IplImage currentGray = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00005.png", CV_LOAD_IMAGE_GRAYSCALE);
-        IplImage result = Utils.warpImage2( currentGray, boundingBox );
+        //IplImage result = Utils.warpImage2( currentGray, boundingBox );
 
+        CvScalar mean   = new CvScalar(1);
+        CvScalar stdDev = new CvScalar(1);
+        cvAvgSdv( currentGray, mean, stdDev, null );
+        System.out.println("mean:" + mean );
+        System.out.println("stdev:" + stdDev );
 
-        cvSmooth( currentGray, currentGray , CV_GAUSSIAN, 9,9, 1.5, 1.5 );
+//        IplImage iisum = IplImage.create(currentGray.width()+1, currentGray.height()+1, IPL_DEPTH_32F, 1);
+//        IplImage iisqsum = IplImage.create(currentGray.width()+1, currentGray.height()+1, IPL_DEPTH_64F, 1);
+
+//        CvMat iisum = cvMat(currentGray.width()+1, currentGray.height()+1, CV_32F, null );
+//        CvMat iisqsum = cvMat(currentGray.width()+1, currentGray.height()+1, CV_64F, null );
+
+        CvMat iisum = CvMat.create(currentGray.height()+1, currentGray.width()+1, CV_32F, 1 );
+        CvMat iisqsum = CvMat.create(currentGray.height()+1, currentGray.width()+1, CV_64F, 1 );
+        cvIntegral(currentGray, iisum, iisqsum, null);
+
+        System.out.println("Hello:" + getVariance(boundingBox, iisum, iisqsum ) );
+
+//        FloatBuffer fb = iisum.getFloatBuffer();
+//        for( int x=0;x<(currentGray.width()*currentGray.height());x++) {
+//            if( fb.get(x) != 0 )
+//                System.out.println(" " + fb.get(x) );
+//        }
+//        ByteBuffer bb = iisqsum.getByteBuffer();
+//        for( int x=0;x<10000;x++)
+//        {
+//            if( bb.get(x) != 0 )
+//                System.out.println(" " + bb.get(x) );
+//        }
+//        cvSaveImage("/tmp/blarg.png", iisum);
+        //meanStdDev
+        cvSmooth(currentGray, currentGray, CV_GAUSSIAN, 9, 9, 1.5, 1.5);
         //cvSaveImage("/tmp/smoothed.png", currentGray);
         opencv_features2d.LDetector unusedBugWorkAround = new opencv_features2d.LDetector();
         opencv_features2d.PatchGenerator generator = new opencv_features2d.PatchGenerator(0.0, //background min
@@ -69,38 +102,30 @@ public class TestWarp {
             cvSaveImage("/tmp/warp"+x+".png", warpPatch );
         }
 
-
-        //currentGray.c
-//        generator.generate( currentGray, boundingBox.getCenter(), currentGray, boundingBox.getSize(), rng );
-//        generator.generate( currentGray, boundingBox.getCenter(), currentGray, boundingBox.getSize(), rng );
-
-
-
-//
-//        cvLine(
-//                result,
-//                cvPoint(Math.round(boundingBox.x1+10), Math.round(boundingBox.y1)),
-//                cvPoint(Math.round(boundingBox.x2-10), Math.round(boundingBox.y1)),
-//                CV_RGB(0, 255, 0), 1, 8, 0);
-//
-//        cvLine(
-//                result,
-//                cvPoint(Math.round(boundingBox.x1), Math.round(boundingBox.y2)),
-//                cvPoint(Math.round(boundingBox.x2), Math.round(boundingBox.y2)-15),
-//                CV_RGB(0, 255, 0), 1, 8, 0);
-//
-//
-//
-//        cvSaveImage("/tmp/warp1.png", result);
-//        cvNamedWindow( "Warp", 0 );
-//        cvShowImage( "Warp", result );
-//
-//
-//        cvWaitKey(0);
-
-
     }
 
+    public static double getVariance( BoundingBox boundingBox, CvMat sum, CvMat squareSum ){
 
+        double bottomRightSum       = sum.get( (int)(boundingBox.y2),
+                                               (int)(boundingBox.x2) );
+        double bottomLeftSum        = sum.get( (int)(boundingBox.y2),
+                                               (int)(boundingBox.x1) );
+        double topRightSum          = sum.get( (int)(boundingBox.y1),
+                                               (int)(boundingBox.x2) );
+        double topLeftSum           = sum.get( (int)(boundingBox.y1),
+                                               (int)(boundingBox.x1) );
+        double bottomRightSquareSum = squareSum.get( (int)(boundingBox.y2),
+                                                     (int)(boundingBox.x2) );
+        double bottomLeftSquareSum  = squareSum.get( (int)(boundingBox.y2),
+                                                     (int)(boundingBox.x1) );
+        double topRightSquareSum    = squareSum.get( (int)(boundingBox.y1),
+                                                     (int)(boundingBox.x2) );
+        double topLeftSquareSum     = squareSum.get( (int)(boundingBox.y1),
+                                                     (int)(boundingBox.x1) );
 
+        double mean         = (bottomRightSum+topLeftSum-topRightSum-bottomLeftSum) / ((double) boundingBox.getArea());
+        double squareMean   = (bottomRightSquareSum+topLeftSquareSum-topRightSquareSum-bottomLeftSquareSum) / ((double) boundingBox.getArea());
+        //so the variance is the difference in the integrated squareMean and meanSquare
+        return( squareMean - mean * mean);
+    }
 }

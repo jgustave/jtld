@@ -375,160 +375,160 @@ public class Utils {
         }
         return( result );
     }
-
-    public static IplImage warpImage (IplImage    currentGray,
-                                      BoundingBox boundingBox) {
-
-        //For init: 'noise',5,'angle',20,'shift',0.02,'scale',0.02
-        //For Update: 'noise',5,'angle',10,'shift',0.02,'scale',0.02
-
-        int noise = 5;
-        int angle = 20;
-        float shift = 0.02f;
-        float scale = 0.02f;
-        float centerX = 0.5f*(boundingBox.x1 + boundingBox.x2);
-        float centerY = 0.5f*(boundingBox.y1 + boundingBox.y2);
-
-        CvMat resultMatrix = CvMat.create(3,3,CV_64F);
-        CvPoint2D32f srcPoints = boundingBox.toQuadrangle();
-
-        //grow/shrink H/W
-        //Rotate L/R
-        CvPoint2D32f destPoints = boundingBox.toQuadrangleBar();
-
-
-
-        cvGetPerspectiveTransform( srcPoints, destPoints, resultMatrix );
-
-        System.out.println("MAT:\n" + resultMatrix );
-
-        IplImage    dest = currentGray.clone();
-        cvWarpPerspective( currentGray, dest, resultMatrix );
-
-        //TODO: add a constant noise to entire img.
-
-        return dest;  //To change body of created methods use File | Settings | File Templates.
-    }
-
-
-
-    /**
-     * Meh!
-     * @param currentGray
-     * @param boundingBox
-     * @return
-     */
-    public static IplImage warpImage2 (IplImage    currentGray,
-                                      BoundingBox boundingBox) {
-
-        //For init: 'noise',5,'angle',20,'shift',0.02,'scale',0.02
-        //For Update: 'noise',5,'angle',10,'shift',0.02,'scale',0.02
-
-        int noise = 5;
-        int angle = 20;
-        float shift = 0.02f;
-        float scale = 0.02f;
-        float centerX = 0.5f*(boundingBox.x1 + boundingBox.x2);
-        float centerY = 0.5f*(boundingBox.y1 + boundingBox.y2);
-
-        CvMat shift1 = CvMat.create(3,3,CV_32F);
-        shift1.put(1f,0f,-centerX,
-                   0f,1f,-centerY,
-                   0f,0f,1f);
-//        shift1.put(1f,0f,0f,
-//                   0f,1f,0f,
+//
+//    public static IplImage warpImage (IplImage    currentGray,
+//                                      BoundingBox boundingBox) {
+//
+//        //For init: 'noise',5,'angle',20,'shift',0.02,'scale',0.02
+//        //For Update: 'noise',5,'angle',10,'shift',0.02,'scale',0.02
+//
+//        int noise = 5;
+//        int angle = 20;
+//        float shift = 0.02f;
+//        float scale = 0.02f;
+//        float centerX = 0.5f*(boundingBox.x1 + boundingBox.x2);
+//        float centerY = 0.5f*(boundingBox.y1 + boundingBox.y2);
+//
+//        CvMat resultMatrix = CvMat.create(3,3,CV_64F);
+//        CvPoint2D32f srcPoints = boundingBox.toQuadrangle();
+//
+//        //grow/shrink H/W
+//        //Rotate L/R
+//        CvPoint2D32f destPoints = boundingBox.toQuadrangleBar();
+//
+//
+//
+//        cvGetPerspectiveTransform( srcPoints, destPoints, resultMatrix );
+//
+//        System.out.println("MAT:\n" + resultMatrix );
+//
+//        IplImage    dest = currentGray.clone();
+//        cvWarpPerspective( currentGray, dest, resultMatrix );
+//
+//        //TODO: add a constant noise to entire img.
+//
+//        return dest;  //To change body of created methods use File | Settings | File Templates.
+//    }
+//
+//
+//
+//    /**
+//     * Meh!
+//     * @param currentGray
+//     * @param boundingBox
+//     * @return
+//     */
+//    public static IplImage warpImage2 (IplImage    currentGray,
+//                                      BoundingBox boundingBox) {
+//
+//        //For init: 'noise',5,'angle',20,'shift',0.02,'scale',0.02
+//        //For Update: 'noise',5,'angle',10,'shift',0.02,'scale',0.02
+//
+//        int noise = 5;
+//        int angle = 20;
+//        float shift = 0.02f;
+//        float scale = 0.02f;
+//        float centerX = 0.5f*(boundingBox.x1 + boundingBox.x2);
+//        float centerY = 0.5f*(boundingBox.y1 + boundingBox.y2);
+//
+//        CvMat shift1 = CvMat.create(3,3,CV_32F);
+//        shift1.put(1f,0f,-centerX,
+//                   0f,1f,-centerY,
 //                   0f,0f,1f);
-
-
-        System.out.println("shift1\n" + shift1);
-
-        float scaleAmnt = 1f-scale*(rand.nextFloat()-0.5f);
-        CvMat scaleMat  = CvMat.create(3,3,CV_32F);
-        scaleMat.put(scaleAmnt,0f,0f,
-                     0f,scaleAmnt,0f,
-                     0f,0f,1f);
-
-        System.out.println("scale\n" + scaleMat);
-
-        float angleAmnt = DEGREE_TO_RADIAN * angle * (rand.nextFloat()-0.5f);
-        float cosineAmnt = (float)Math.cos(angleAmnt);
-        float sinAmnt    = (float)Math.sin(angleAmnt);
-        CvMat angleMat  = CvMat.create(3,3,CV_32F);
-        angleMat.put(cosineAmnt,-sinAmnt,0f,
-                     sinAmnt,cosineAmnt,0f,
-                     0f,0f,1f );
-        System.out.println("angle\n" + angleMat);
-
-
-        float shiftRight  = shift * boundingBox.getHeight() * (rand.nextFloat()-0.5f);
-        float shiftCenter = shift * boundingBox.getWidth() * (rand.nextFloat()-0.5f);
-
-        CvMat shift2  = CvMat.create(3,3,CV_32F);
-        shift2.put(1f,0f,shiftCenter,
-                     0, 1,shiftRight,
-                     0f,0f,1f );
-        System.out.println("shift2\n" + shift2);
-
-        CvMat warpMat = CvMat.create(3,3,CV_32F);
-        CvMat tempMat = CvMat.create(3,3,CV_32F );
-
-        cvMatMul(shift1,scaleMat,tempMat);
-
-        cvMatMul(tempMat,angleMat,warpMat);
-        cvMatMul(warpMat,shift2,tempMat);
-
-        cvMatMul(tempMat,tempMat,warpMat);
-        CvMat warpInvMat = CvMat.create(3,3,CV_32F);
-        cvInvert( warpMat, warpInvMat );
-
-
-//MAT:
-//[ 3.5447762, -6.616915, -55.22388
-//  0.2238806, 0.41791046, -1.3432835
-//  0.0074626864, -0.020895522, 1.0 ]
-
-//        warpMat.put(0.9769908, 0.22125624, -55.4906,
-//                    -0.22125624, 0.9769908, -1.3119,
-//                    0.0, 0.0, 1.0 );
-
-//        warpMat.put( 3.5447762, -6.616915, -55.22388,
-//                     0.2238806, 0.41791046, -1.3432835,
-//                     0.0074626864, -0.020895522, 1.0 );
-
-
-        System.out.println("warp\n" + warpMat);
-
-//   //width
-//    bbW = bb_width(bb)-1;
-//    //height
-//    bbH = bb_height(bb)-1;
+////        shift1.put(1f,0f,0f,
+////                   0f,1f,0f,
+////                   0f,0f,1f);
 //
-//    //seems to be the bb centered over the origin.
-//    box = [-bbW/2 bbW/2 -bbH/2 bbH/2];
 //
-
-
-        IplImage    dest = currentGray.clone();
-        //IplImage    dest = cvCreateImage(cvSize(100,100),8,1);
-
-//0.97849    0.15052  -61.16216
-//   -0.15052    0.97849  -65.37352
-//    0.00000    0.00000    1.00000
-
-        //cvMatMul(src,src,dst);
-
-        //Might consider64f
-//        CvMat matrix = CvMat.create(3,3,CV_32F);
-//        matrix.put(0.97849,0.15052,-1.16216,
-//                   -0.15052,0.97849,-5.37352,
-//                   0.00000,0.00000,1.00000);
-//        System.out.println("" + matrix );
-        //matrix.p
-        //cvWarpPerspective( Utils.getImagePatch( currentGray, boundingBox ), dest, matrix );
-        cvWarpPerspective( currentGray, dest, warpMat );
-
-        return dest;  //To change body of created methods use File | Settings | File Templates.
-    }
+//        System.out.println("shift1\n" + shift1);
+//
+//        float scaleAmnt = 1f-scale*(rand.nextFloat()-0.5f);
+//        CvMat scaleMat  = CvMat.create(3,3,CV_32F);
+//        scaleMat.put(scaleAmnt,0f,0f,
+//                     0f,scaleAmnt,0f,
+//                     0f,0f,1f);
+//
+//        System.out.println("scale\n" + scaleMat);
+//
+//        float angleAmnt = DEGREE_TO_RADIAN * angle * (rand.nextFloat()-0.5f);
+//        float cosineAmnt = (float)Math.cos(angleAmnt);
+//        float sinAmnt    = (float)Math.sin(angleAmnt);
+//        CvMat angleMat  = CvMat.create(3,3,CV_32F);
+//        angleMat.put(cosineAmnt,-sinAmnt,0f,
+//                     sinAmnt,cosineAmnt,0f,
+//                     0f,0f,1f );
+//        System.out.println("angle\n" + angleMat);
+//
+//
+//        float shiftRight  = shift * boundingBox.getHeight() * (rand.nextFloat()-0.5f);
+//        float shiftCenter = shift * boundingBox.getWidth() * (rand.nextFloat()-0.5f);
+//
+//        CvMat shift2  = CvMat.create(3,3,CV_32F);
+//        shift2.put(1f,0f,shiftCenter,
+//                     0, 1,shiftRight,
+//                     0f,0f,1f );
+//        System.out.println("shift2\n" + shift2);
+//
+//        CvMat warpMat = CvMat.create(3,3,CV_32F);
+//        CvMat tempMat = CvMat.create(3,3,CV_32F );
+//
+//        cvMatMul(shift1,scaleMat,tempMat);
+//
+//        cvMatMul(tempMat,angleMat,warpMat);
+//        cvMatMul(warpMat,shift2,tempMat);
+//
+//        cvMatMul(tempMat,tempMat,warpMat);
+//        CvMat warpInvMat = CvMat.create(3,3,CV_32F);
+//        cvInvert( warpMat, warpInvMat );
+//
+//
+////MAT:
+////[ 3.5447762, -6.616915, -55.22388
+////  0.2238806, 0.41791046, -1.3432835
+////  0.0074626864, -0.020895522, 1.0 ]
+//
+////        warpMat.put(0.9769908, 0.22125624, -55.4906,
+////                    -0.22125624, 0.9769908, -1.3119,
+////                    0.0, 0.0, 1.0 );
+//
+////        warpMat.put( 3.5447762, -6.616915, -55.22388,
+////                     0.2238806, 0.41791046, -1.3432835,
+////                     0.0074626864, -0.020895522, 1.0 );
+//
+//
+//        System.out.println("warp\n" + warpMat);
+//
+////   //width
+////    bbW = bb_width(bb)-1;
+////    //height
+////    bbH = bb_height(bb)-1;
+////
+////    //seems to be the bb centered over the origin.
+////    box = [-bbW/2 bbW/2 -bbH/2 bbH/2];
+////
+//
+//
+//        IplImage    dest = currentGray.clone();
+//        //IplImage    dest = cvCreateImage(cvSize(100,100),8,1);
+//
+////0.97849    0.15052  -61.16216
+////   -0.15052    0.97849  -65.37352
+////    0.00000    0.00000    1.00000
+//
+//        //cvMatMul(src,src,dst);
+//
+//        //Might consider64f
+////        CvMat matrix = CvMat.create(3,3,CV_32F);
+////        matrix.put(0.97849,0.15052,-1.16216,
+////                   -0.15052,0.97849,-5.37352,
+////                   0.00000,0.00000,1.00000);
+////        System.out.println("" + matrix );
+//        //matrix.p
+//        //cvWarpPerspective( Utils.getImagePatch( currentGray, boundingBox ), dest, matrix );
+//        cvWarpPerspective( currentGray, dest, warpMat );
+//
+//        return dest;  //To change body of created methods use File | Settings | File Templates.
+//    }
 
 
     public static double normalizedCorrelation( double[] patch1, double[] patch2 ) {
@@ -579,6 +579,7 @@ public class Utils {
             throw new RuntimeException("Patches not same size");
         }
 
+        //I wonder if we should/can do a recursive version to increase percision?
         for( int x=0;x<patch1.length;x++) {
             correlation += (double)patch1[x] * (double)patch2[x];
             norm1 += (double)patch1[x] * (double)patch1[x];

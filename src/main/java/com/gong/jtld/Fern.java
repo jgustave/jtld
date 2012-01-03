@@ -34,6 +34,7 @@ public class Fern {
     private final Feature[][] features;
     //private final List<int[]> positiveFeatures = new ArrayList<int[]>();
     //private final List<int[]> negativeFeatures = new ArrayList<int[]>();
+    private float minThreshold;
     private float negativeThreshold;
     private float positiveThreshold;
     private final int numFerns;
@@ -53,7 +54,7 @@ public class Fern {
         //Various scaling factors of the initialBB
         this.numFerns           = numFerns;
         this.negativeThreshold  = 0.5f*numFerns;
-        this.negativeThreshold  = 0.5f*numFerns;
+        this.positiveThreshold  = 0.5f*numFerns;
         this.featuresPerFern    = featuresPerFern;
         int totalFeatures       = numFerns * featuresPerFern;
         this.features           = new Feature[SCALES.length][totalFeatures];
@@ -100,6 +101,10 @@ public class Fern {
 
         initFirst(initialImage, bestBoxes, variedWorstOverlaps);
         System.out.println("foo");
+    }
+
+    public int getNumFerns () {
+        return numFerns;
     }
 
     public void train( IplImage image,
@@ -156,11 +161,39 @@ public class Fern {
         for(ScaledBoundingBox box : worstBoxes ) {
             //IplImage badImage = Utils.getImagePatch( image, box );
             cvSetImageROI( image, box.getRect() );
+
+            //TODO: variance:
+////If there isn't much variance in the image, then don't bother.. not a good example
+//            if (getVar(grid[idx],iisum,iisqsum)<var*0.5f) {
+//                  continue;
+//            }
+
+
             negativeFeatures.add(getFeatures( image, box.scaleIndex ) );
         }
         cvResetImageROI( image );
         train( positiveFeatures, negativeFeatures );
     }
+
+
+  public double getVariance(BoundingBox box ){ //sum and sumsquare
+
+    //does what you think.. reference to row,column
+//  double brs = sum.at<int>( box.y+box.height, box.x+box.width );
+//  double bls = sum.at<int>(box.y+box.height,box.x);
+//  double trs = sum.at<int>(box.y,box.x+box.width);
+//  double tls = sum.at<int>(box.y,box.x);
+//  double brsq = sqsum.at<double>(box.y+box.height,box.x+box.width);
+//  double blsq = sqsum.at<double>(box.y+box.height,box.x);
+//  double trsq = sqsum.at<double>(box.y,box.x+box.width);
+//  double tlsq = sqsum.at<double>(box.y,box.x);
+//
+//  double mean = (brs+tls-trs-bls)/((double)box.area());
+//  double sqmean = (brsq+tlsq-trsq-blsq)/((double)box.area());
+//  return sqmean-mean*mean;
+      return( 0.0 );
+}
+
 
     /**
      * Look at an image and find the features
@@ -233,7 +266,20 @@ public class Fern {
         }
     }
 
+    public void updateMinThreshold(List<int[]> negativeFeatures ){
+        float threshold = 0.0f;
+        for (int[] negativeFeature : negativeFeatures) {
+            threshold = measureVotes(negativeFeature) / numFerns;
+            if (threshold > minThreshold) {
+                minThreshold = threshold;
+            }
+        }
+    }
+
     public void train( List<int[]> positiveFeatures, List<int[]> negativeFeatures ){
+
+        positiveThreshold = minThreshold*numFerns;
+
         Set<int[]> negativo = new HashSet<int[]>();
         for( int[] neg : negativeFeatures ) {
             negativo.add( neg );
