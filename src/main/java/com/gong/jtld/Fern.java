@@ -127,35 +127,38 @@ public class Fern {
 
     @SuppressWarnings ({"unchecked"})
     public void initFirst(IplImage image, List<ScaledBoundingBox> bestBoxes, List<ScaledBoundingBox> worstBoxes ) {
-        //BoundingBox hullBox          = BoundingBox.getHullBox( (List)bestBoxes );
+        BoundingBox hullBox          = BoundingBox.getHullBox( (List)bestBoxes );
         List<int[]> positiveFeatures = new ArrayList<int[]>();
         List<int[]> negativeFeatures = new ArrayList<int[]>();
 
 
         //source image as blurred image to start?
-        IplImage    patch    = null;
+        IplImage    patch          = null;
+        IplImage    smoothImage    = image.clone();
         //IplImage    smoothed = null;
 
-        //BUGBUG WE are being destructive...
-        cvSmooth( image, image, CV_GAUSSIAN, 9,9, 1.5, 1.5 );
+        cvSmooth( image, smoothImage, CV_GAUSSIAN, 9,9, 1.5, 1.5 );
 
 
 //This morph doesn't work as well...
-//        patch = image.clone();
-//        for( int x=0;x<10*numWarps;x++) {
-//            cvSetImageROI( patch, hullBox.getRect() );
-//            generator.generate( image, hullBox.getCenter(), patch, hullBox.getSize(), rng );
-//            cvSetImageROI( patch, bestBoxes.get(0).getRect() );
-//            positiveFeatures.add( getFeatures( patch, bestBoxes.get(0).scaleIndex ) );
-//        }
+        patch = smoothImage.clone();
+        for( int x=0;x<10*numWarps;x++) {
+            cvResetImageROI( patch );
+            cvSetImageROI( patch, hullBox.getRect() );
+            generator.generate( smoothImage, hullBox.getCenter(), patch, hullBox.getSize(), rng );
+            cvResetImageROI( patch );
+            cvSetImageROI( patch, bestBoxes.get(0).getRect() );
+            positiveFeatures.add( getFeatures( patch, bestBoxes.get(0).scaleIndex ) );
+        }
 
 
-        patch = Utils.getImagePatch(image, bestBoxes.get(0) );
+        patch = Utils.getImagePatch(smoothImage, bestBoxes.get(0) );
+
         for( int x=0;x<numWarps;x++) {
             //first image is unwarped
             if( x>0) {
                 //Randomly warp into a new patch
-                generator.generate( image,
+                generator.generate( smoothImage,
                                     bestBoxes.get(0).getCenter(),
                                     patch,
                                     bestBoxes.get(0).getSize(),
@@ -167,17 +170,18 @@ public class Fern {
 
 
         for(ScaledBoundingBox box : worstBoxes ) {
-            //IplImage badImage = Utils.getImagePatch( image, box );
-            cvSetImageROI( image, box.getRect() );
-            negativeFeatures.add(getFeatures( image, box.scaleIndex ) );
+            cvSetImageROI( smoothImage, box.getRect() );
+            negativeFeatures.add(getFeatures( smoothImage, box.scaleIndex ) );
         }
-        cvResetImageROI( image );
+        cvResetImageROI( smoothImage );
         train( positiveFeatures, negativeFeatures );
+
+        //TODO: free smoothedImage
     }
 
     /**
      * Look at an image and find the features
-     * @param image
+     * @param image IMAGE PASSED IN SHOULD BE THE CROPPED AND BLURRED IMAGE
      * @param scaleIndex The scale that we are getting features at.
      * @return One Fern per numFerns
      */
@@ -208,8 +212,15 @@ public class Fern {
         }
         return( votes );
     }
-    public float measureVotes( IplImage image, ScaledBoundingBox boundingBox ) {
-        return( measureVotes( getFeatures( image, boundingBox.scaleIndex ) ) );
+
+
+    public float measureVotesDebug( IplImage image, ScaledBoundingBox boundingBox ) {
+        IplImage    patch          = null;
+        IplImage    smoothImage    = image.clone();
+        cvSmooth( image, smoothImage, CV_GAUSSIAN, 9, 9, 1.5, 1.5 );
+        patch = Utils.getImagePatch( smoothImage, boundingBox );
+        return( measureVotes( getFeatures( patch, boundingBox.scaleIndex ) ) );
+        //TODO: clean up memory
     }
 
     public void updatePosterior(boolean isPositive, int[] ferns ){
@@ -257,17 +268,18 @@ public class Fern {
             positivo.add( positive );
         }
         List<int[]> foo = new ArrayList<int[]>();
-        foo.addAll( negativeFeatures );
         foo.addAll( positiveFeatures );
+        foo.addAll( negativeFeatures );
         Collections.shuffle( foo );
 
         for( int[] sample : foo ) {
+            float vote = measureVotes( sample );
             if( positivo.contains( sample ) ) {
-                if( measureVotes( sample ) <= positiveThreshold ) {
+                if( vote <= positiveThreshold ) {
                     updatePosterior( true, sample );
                 }
             }else {
-                if( measureVotes( sample ) >= negativeThreshold ) {
+                if( vote >= negativeThreshold ) {
                     updatePosterior( false, sample );
                 }
             }

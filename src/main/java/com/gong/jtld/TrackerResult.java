@@ -28,7 +28,6 @@ public class TrackerResult {
         if( getNumPoints() == 0 ) {
             throw new RuntimeException("No POints");
         }
-        System.out.println("NumPts:" + getNumPoints() );
         this.origPoints           = new CvPoint2D32f(getNumPoints());
         this.foundPoints          = new CvPoint2D32f(getNumPoints());
         for( int x=0;x<getNumPoints();x++) {

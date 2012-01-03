@@ -35,7 +35,7 @@ public class Jtdl {
     public final Fern                           fern;
 
     //Template Bounding boxes used when scanning the image for matches.
-    private      List<ScanningBoundingBoxes>    scanningBoundingBoxesList;
+    public       List<ScanningBoundingBoxes>    scanningBoundingBoxesList;
 
     //Various Parameters
     private int     numFerns                = 10;
@@ -169,10 +169,12 @@ public class Jtdl {
 
         ScaledBoundingBox bestBox = bestOverlaps.get(0);
         System.out.println("BestNN:" + nearestNeighbor.getFoo(grayScaleImage, bestBox).relativeSimilarity);
-        System.out.println("BestFern:" + fern.measureVotes( grayScaleImage, bestBox ) );
+        System.out.println("BestFern:" + fern.measureVotesDebug( grayScaleImage, bestBox ) );
 
         nearestNeighbor.train(grayScaleImage, (List) bestOverlaps, (List) worstOverlaps);
         fern.train(grayScaleImage, updatedBoundingBox, bestOverlaps, variedWorstOverlaps);
+        System.out.println("PostBestNN:" + nearestNeighbor.getFoo(grayScaleImage, bestBox).relativeSimilarity);
+        System.out.println("PostBestFern:" + fern.measureVotesDebug( grayScaleImage, bestBox ) );
     }
 
 

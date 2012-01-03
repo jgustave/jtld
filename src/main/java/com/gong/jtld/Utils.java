@@ -663,10 +663,9 @@ public class Utils {
             if( closestMap.size() == 0 ) {
                 break;
             }
-            //We might get a little extra... that's ok.
-            closestList.addAll( closestMap.pollFirstEntry().getValue() );
+            closestList.addAll( closestMap.pollLastEntry().getValue() );
         }
-        return( closestList );
+        return( closestList.subList(0, Math.min( closestList.size(), maxResults ) ) );
     }
 
     /**

@@ -42,7 +42,7 @@ public class TestRun {
             String inStr  = temp.substring(temp.length()-5,temp.length());
             temp     = "00000" + outputImageNo;
             String outStr  = temp.substring(temp.length()-5,temp.length());
-            System.out.println("::"+inStr);
+            System.out.println("Image::"+inStr);
             nextGray = cvLoadImage("/Users/jerdavis/devhome/jtld/images/"+inStr+".png", CV_LOAD_IMAGE_GRAYSCALE);
             next     = cvLoadImage("/Users/jerdavis/devhome/jtld/images/"+inStr+".png", CV_LOAD_IMAGE_UNCHANGED);
 

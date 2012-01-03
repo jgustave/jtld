@@ -35,6 +35,42 @@ public class BoundingBox {
         return( y2 - y1 );
     }
 
+    @Override
+    public boolean equals (Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof BoundingBox)) {
+            return false;
+        }
+
+        BoundingBox that = (BoundingBox) o;
+
+        if (Float.compare(that.x1, x1) != 0) {
+            return false;
+        }
+        if (Float.compare(that.x2, x2) != 0) {
+            return false;
+        }
+        if (Float.compare(that.y1, y1) != 0) {
+            return false;
+        }
+        if (Float.compare(that.y2, y2) != 0) {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode () {
+        int result = (x1 != +0.0f ? Float.floatToIntBits(x1) : 0);
+        result = 31 * result + (y1 != +0.0f ? Float.floatToIntBits(y1) : 0);
+        result = 31 * result + (x2 != +0.0f ? Float.floatToIntBits(x2) : 0);
+        result = 31 * result + (y2 != +0.0f ? Float.floatToIntBits(y2) : 0);
+        return result;
+    }
+
     /**
      * Return an inner box by the given margin.
      * @param margin
