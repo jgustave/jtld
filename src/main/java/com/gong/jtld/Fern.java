@@ -11,6 +11,7 @@ import static com.googlecode.javacv.cpp.opencv_core.cvResetImageROI;
 import static com.googlecode.javacv.cpp.opencv_core.cvSetImageROI;
 import static com.googlecode.javacv.cpp.opencv_imgproc.CV_GAUSSIAN;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvSmooth;
+import static com.gong.jtld.Jtdl.SCALES;
 
 
 import java.util.*;
@@ -20,18 +21,13 @@ import java.util.*;
  */
 public class Fern {
     private static final Random rand = new Random();
-    private static final double[] SCALES = { 0.16151,0.19381,0.23257,0.27908,0.33490,
-                                             0.40188,0.48225,0.57870,0.69444,0.83333,
-                                             1.00000,1.20000,1.44000,1.72800,2.07360,
-                                             2.48832,2.98598,3.58318,4.29982,5.15978,6.19174 };
     //scaledWindows
 
     private final PatchGenerator generator;
     private final opencv_core.CvRNG rng = new opencv_core.CvRNG();
 
 
-    //[Scale][numFerns*featuresPerFern]  since we want to recognize the object at multiple scales
-    private final Feature[][] features;
+
     //private final List<int[]> positiveFeatures = new ArrayList<int[]>();
     //private final List<int[]> negativeFeatures = new ArrayList<int[]>();
     private float minThreshold;
@@ -41,6 +37,9 @@ public class Fern {
     private final int featuresPerFern;
     private final int numWarps = 10;
 
+
+    //[Scale][numFerns*featuresPerFern]  since we want to recognize the object at multiple scales
+    private final Feature[][] features;
     //[Per Fern][2^features per fern]
     //the 2^features is because we test for the presense or absense which is just a binary number
     //so we need to represent all possible combinations of features
@@ -48,16 +47,40 @@ public class Fern {
     private final int[][]     negativeCounter;
     private final float[][]   posteriors;
 
-    public Fern (int numFerns, int featuresPerFern, IplImage initialImage, BoundingBox initialBox,
-                 List<ScanningBoundingBoxes> scanningBoundingBoxesList, List<ScaledBoundingBox> bestBoxes,
-                 List<ScaledBoundingBox> variedWorstOverlaps) {
+    public Fern (int numFerns, int featuresPerFern ) {
         //Various scaling factors of the initialBB
         this.numFerns           = numFerns;
         this.negativeThreshold  = 0.5f*numFerns;
         this.positiveThreshold  = 0.5f*numFerns;
         this.featuresPerFern    = featuresPerFern;
+
         int totalFeatures       = numFerns * featuresPerFern;
         this.features           = new Feature[SCALES.length][totalFeatures];
+        this.positiveCounter    = new int[numFerns][(int)Math.pow(2,featuresPerFern)];
+        this.negativeCounter    = new int[numFerns][(int)Math.pow(2,featuresPerFern)];
+        this.posteriors         = new float[numFerns][(int)Math.pow(2,featuresPerFern)];
+
+
+        opencv_features2d.LDetector unusedBugWorkAround = new opencv_features2d.LDetector();
+        generator = new opencv_features2d.PatchGenerator(0.0, //background min
+                                                        0.0, //background max
+                                                        5.0,  //noise range
+                                                        true, //random blur
+                                                        1.0-0.02,//lambda (min scaling)
+                                                        1.0+0.02,//max scaling
+                                                        -20.0*Math.PI/180.0, //theta
+                                                        20.0*Math.PI/180.0,
+                                                        -20.0*Math.PI/180.0, //phi
+                                                        20.0*Math.PI/180.0);
+    }
+
+    public void init(IplImage initialImage,
+                     BoundingBox initialBox,
+                     List<ScaledBoundingBox> bestBoxes,
+                     List<ScaledBoundingBox> variedWorstOverlaps) {
+        this.negativeThreshold  = 0.5f*numFerns;
+        this.positiveThreshold  = 0.5f*numFerns;
+        int totalFeatures       = numFerns * featuresPerFern;
 
         //GENERATE THE FEATURES
         float width  = initialBox.getWidth();
@@ -78,29 +101,16 @@ public class Fern {
                 features[y][x] = feature;
             }
         }
-
-
-
-        positiveCounter = new int[numFerns][(int)Math.pow(2,featuresPerFern)];
-        negativeCounter = new int[numFerns][(int)Math.pow(2,featuresPerFern)];
-        posteriors      = new float[numFerns][(int)Math.pow(2,featuresPerFern)];
-
-
-        opencv_features2d.LDetector unusedBugWorkAround = new opencv_features2d.LDetector();
-        generator = new opencv_features2d.PatchGenerator(0.0, //background min
-                                                        0.0, //background max
-                                                        5.0,  //noise range
-                                                        true, //random blur
-                                                        1.0-0.02,//lambda (min scaling)
-                                                        1.0+0.02,//max scaling
-                                                        -20.0*Math.PI/180.0, //theta
-                                                        20.0*Math.PI/180.0,
-                                                        -20.0*Math.PI/180.0, //phi
-                                                        20.0*Math.PI/180.0);
-
+        int numFeatureElements = (int)Math.pow(2,featuresPerFern);
+        for( int x=0;x<numFerns;x++) {
+            for( int y=0;y<numFeatureElements;y++){
+                positiveCounter[x][y]=0;
+                negativeCounter[x][y]=0;
+                posteriors[x][y]=0;
+            }
+        }
 
         initFirst(initialImage, bestBoxes, variedWorstOverlaps);
-        System.out.println("foo");
     }
 
     public int getNumFerns () {
@@ -118,7 +128,7 @@ public class Fern {
 
     @SuppressWarnings ({"unchecked"})
     public void initFirst(IplImage image, List<ScaledBoundingBox> bestBoxes, List<ScaledBoundingBox> worstBoxes ) {
-        BoundingBox hullBox          = BoundingBox.getHullBox( (List)bestBoxes );
+        //BoundingBox hullBox          = BoundingBox.getHullBox( (List)bestBoxes );
         List<int[]> positiveFeatures = new ArrayList<int[]>();
         List<int[]> negativeFeatures = new ArrayList<int[]>();
 
@@ -127,7 +137,6 @@ public class Fern {
         IplImage    patch    = null;
         //IplImage    smoothed = null;
 
-        //cvSmooth()
         //BUGBUG WE are being destructive...
         cvSmooth( image, image, CV_GAUSSIAN, 9,9, 1.5, 1.5 );
 
@@ -174,26 +183,6 @@ public class Fern {
         cvResetImageROI( image );
         train( positiveFeatures, negativeFeatures );
     }
-
-
-  public double getVariance(BoundingBox box ){ //sum and sumsquare
-
-    //does what you think.. reference to row,column
-//  double brs = sum.at<int>( box.y+box.height, box.x+box.width );
-//  double bls = sum.at<int>(box.y+box.height,box.x);
-//  double trs = sum.at<int>(box.y,box.x+box.width);
-//  double tls = sum.at<int>(box.y,box.x);
-//  double brsq = sqsum.at<double>(box.y+box.height,box.x+box.width);
-//  double blsq = sqsum.at<double>(box.y+box.height,box.x);
-//  double trsq = sqsum.at<double>(box.y,box.x+box.width);
-//  double tlsq = sqsum.at<double>(box.y,box.x);
-//
-//  double mean = (brs+tls-trs-bls)/((double)box.area());
-//  double sqmean = (brsq+tlsq-trsq-blsq)/((double)box.area());
-//  return sqmean-mean*mean;
-      return( 0.0 );
-}
-
 
     /**
      * Look at an image and find the features

@@ -33,9 +33,9 @@ public class TestRun {
         IplImage next        = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00005.png", CV_LOAD_IMAGE_UNCHANGED);
 
 
-        Jtdl jtdl = new Jtdl(currentGray, boundingBox );
+        Jtdl jtdl = new Jtdl( );
+        jtdl.init( next, boundingBox );
         NearestNeighbor nearestNeighbor = jtdl.nearestNeighbor;
-        List<ScanningBoundingBoxes> testBoundingBoxes   = jtdl.scanningBoundingBoxesList;
 
 //
 //        //jtdl.fern.dump();
@@ -138,25 +138,25 @@ public class TestRun {
             cvSaveImage("/tmp/imageout-" + outStr + ".png", next);
             outputImageNo++;
         }
-
-        System.out.println("Searching...");
-        IplImage test        = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00001.png", CV_LOAD_IMAGE_GRAYSCALE);
-        double best = 0.0;
-        for( ScanningBoundingBoxes boxes : jtdl.scanningBoundingBoxesList ) {
-            for( ScaledBoundingBox scaledBox : boxes.boundingBoxes ) {
-                IplImage patch = Utils.getImagePatch( test, scaledBox );
-                int[] features = jtdl.fern.getFeatures( patch, scaledBox.scaleIndex );
-                float value = jtdl.fern.measureVotes( features );
-                if( value > 0.0 ) {
-                    NearestNeighbor.Foo foo = jtdl.nearestNeighbor.getFoo(test, scaledBox );
-                    if( foo.relativeSimilarity > best ) {
-                        best = foo.relativeSimilarity;
-                        System.out.println("Votes:" + value + " " + foo.relativeSimilarity );
-                        cvSaveImage("/tmp/found-"+ scaledBox + "-v-" + value + "-s-" + best + ".png", patch);
-                    }
-                }
-            }
-        }
+//
+//        System.out.println("Searching...");
+//        IplImage test        = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00001.png", CV_LOAD_IMAGE_GRAYSCALE);
+//        double best = 0.0;
+//        for( ScanningBoundingBoxes boxes : jtdl.scanningBoundingBoxesList ) {
+//            for( ScaledBoundingBox scaledBox : boxes.boundingBoxes ) {
+//                IplImage patch = Utils.getImagePatch( test, scaledBox );
+//                int[] features = jtdl.fern.getFeatures( patch, scaledBox.scaleIndex );
+//                float value = jtdl.fern.measureVotes( features );
+//                if( value > 0.0 ) {
+//                    NearestNeighbor.Foo foo = jtdl.nearestNeighbor.getFoo(test, scaledBox );
+//                    if( foo.relativeSimilarity > best ) {
+//                        best = foo.relativeSimilarity;
+//                        System.out.println("Votes:" + value + " " + foo.relativeSimilarity );
+//                        cvSaveImage("/tmp/found-"+ scaledBox + "-v-" + value + "-s-" + best + ".png", patch);
+//                    }
+//                }
+//            }
+//        }
 
 
     }

@@ -3,6 +3,7 @@ package com.gong.jtld.test;
 import com.gong.jtld.BoundingBox;
 import com.gong.jtld.ScanningBoundingBoxes;
 
+import com.gong.jtld.Utils;
 import com.googlecode.javacv.cpp.opencv_features2d;
 import static com.googlecode.javacv.cpp.opencv_core.cvAvgSdv;
 import static com.googlecode.javacv.cpp.opencv_core.CvScalar;
@@ -54,7 +55,7 @@ public class TestWarp {
         CvMat iisqsum = CvMat.create(currentGray.height()+1, currentGray.width()+1, CV_64F, 1 );
         cvIntegral(currentGray, iisum, iisqsum, null);
 
-        System.out.println("Hello:" + getVariance(boundingBox, iisum, iisqsum ) );
+        System.out.println("Hello:" + Utils.getVariance(boundingBox, iisum, iisqsum) );
 
 //        FloatBuffer fb = iisum.getFloatBuffer();
 //        for( int x=0;x<(currentGray.width()*currentGray.height());x++) {
@@ -104,28 +105,4 @@ public class TestWarp {
 
     }
 
-    public static double getVariance( BoundingBox boundingBox, CvMat sum, CvMat squareSum ){
-
-        double bottomRightSum       = sum.get( (int)(boundingBox.y2),
-                                               (int)(boundingBox.x2) );
-        double bottomLeftSum        = sum.get( (int)(boundingBox.y2),
-                                               (int)(boundingBox.x1) );
-        double topRightSum          = sum.get( (int)(boundingBox.y1),
-                                               (int)(boundingBox.x2) );
-        double topLeftSum           = sum.get( (int)(boundingBox.y1),
-                                               (int)(boundingBox.x1) );
-        double bottomRightSquareSum = squareSum.get( (int)(boundingBox.y2),
-                                                     (int)(boundingBox.x2) );
-        double bottomLeftSquareSum  = squareSum.get( (int)(boundingBox.y2),
-                                                     (int)(boundingBox.x1) );
-        double topRightSquareSum    = squareSum.get( (int)(boundingBox.y1),
-                                                     (int)(boundingBox.x2) );
-        double topLeftSquareSum     = squareSum.get( (int)(boundingBox.y1),
-                                                     (int)(boundingBox.x1) );
-
-        double mean         = (bottomRightSum+topLeftSum-topRightSum-bottomLeftSum) / ((double) boundingBox.getArea());
-        double squareMean   = (bottomRightSquareSum+topLeftSquareSum-topRightSquareSum-bottomLeftSquareSum) / ((double) boundingBox.getArea());
-        //so the variance is the difference in the integrated squareMean and meanSquare
-        return( squareMean - mean * mean);
-    }
 }

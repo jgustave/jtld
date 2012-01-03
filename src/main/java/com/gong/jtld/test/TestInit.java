@@ -1,8 +1,6 @@
 package com.gong.jtld.test;
 
 import com.gong.jtld.*;
-import com.googlecode.javacv.cpp.opencv_core;
-import com.googlecode.javacv.cpp.opencv_features2d;
 
 import java.util.*;
 
@@ -15,52 +13,6 @@ import static com.googlecode.javacv.cpp.opencv_highgui.*;
  */
 public class TestInit {
 
-
-    /**
-     *
-     * @param initialImage Gray scale
-     * @param overlaps 0/1 how much does each overlap initial BB.
-     */
-    private static void initalPositive( IplImage initialImage,
-                                        List<ScanningBoundingBoxes> boundingBoxeses,
-                                        float[] overlaps ) {
-
-        //get index/bb that has highest overlap
-        //I don't know why we need to standardize on BB's
-        BoundingBox bestBox = null;
-
-
-
-        //Get BB's that overlap > 0.6 .. Get (sorted) max p_par.num_closest
-        //also sent to fern later
-
-        //get a bounding box/convex hull that covers all of the 0.6 overlap
-
-        //get the specific columns and rows in the hull, and make a BB.
-        BoundingBox similarBox;
-
-        List<ScanningBoundingBoxes> similarBoundingBoxes;
-
-        //pEx
-        List<float[]> PositiveExamplePatterns;
-        //getPattern( initialImage, bestBox, PATCHSIZE )
-        //TODO: can also get the mirror image. (two patterns)
-
-        //Now we will stretch/mangle the
-        //to generate other similar positive patterns.
-        int NUM_WARPS = 20;
-        for( int x=0;x<NUM_WARPS;x++) {
-
-        }
-
-        //opencv_features2d.PatchGenerator pg = new opencv_features2d.PatchGenerator();
-
-
-
-
-
-
-    }
 
     public static void main( String[] args ){
         System.out.println("Helloo!");
@@ -86,7 +38,7 @@ public class TestInit {
                                                          currentGray.width(),
                                                          currentGray.height(),
                                                          24 );
-        nearestNeighbor   = new NearestNeighbor( testBoundingBoxes, patchSize );
+        nearestNeighbor   = new NearestNeighbor( patchSize );
 
 
         //Generate Features used by Fern.. Random now.. but there are many better alg.

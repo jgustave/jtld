@@ -704,4 +704,29 @@ public class Utils {
         }
         return( min );
     }
+
+    public static double getVariance( BoundingBox boundingBox, CvMat sum, CvMat squareSum ){
+
+        double bottomRightSum       = sum.get( (int)(boundingBox.y2),
+                                               (int)(boundingBox.x2) );
+        double bottomLeftSum        = sum.get( (int)(boundingBox.y2),
+                                               (int)(boundingBox.x1) );
+        double topRightSum          = sum.get( (int)(boundingBox.y1),
+                                               (int)(boundingBox.x2) );
+        double topLeftSum           = sum.get( (int)(boundingBox.y1),
+                                               (int)(boundingBox.x1) );
+        double bottomRightSquareSum = squareSum.get( (int)(boundingBox.y2),
+                                                     (int)(boundingBox.x2) );
+        double bottomLeftSquareSum  = squareSum.get( (int)(boundingBox.y2),
+                                                     (int)(boundingBox.x1) );
+        double topRightSquareSum    = squareSum.get( (int)(boundingBox.y1),
+                                                     (int)(boundingBox.x2) );
+        double topLeftSquareSum     = squareSum.get( (int)(boundingBox.y1),
+                                                     (int)(boundingBox.x1) );
+
+        double mean         = (bottomRightSum+topLeftSum-topRightSum-bottomLeftSum) / ((double) boundingBox.getArea());
+        double squareMean   = (bottomRightSquareSum+topLeftSquareSum-topRightSquareSum-bottomLeftSquareSum) / ((double) boundingBox.getArea());
+        //so the variance is the difference in the integrated squareMean and meanSquare
+        return( squareMean - mean * mean);
+    }
 }

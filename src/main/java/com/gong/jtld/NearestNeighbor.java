@@ -4,24 +4,21 @@ import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
 import java.util.*;
 
-import static com.googlecode.javacv.cpp.opencv_highgui.cvSaveImage;
-
 /**
  *
  */
 public class NearestNeighbor {
 
-    private final List<float[]> positivePatchPatterns = new ArrayList<float[]>();
-    private final List<float[]> negativePatchPatterns = new ArrayList<float[]>();
+    private final List<float[]> positivePatchPatterns = new ArrayList<float[]>(256);
+    private final List<float[]> negativePatchPatterns = new ArrayList<float[]>(256);
 
-    private final List<ScanningBoundingBoxes> scanningBoundingBoxeses;
-    private final int patchSize;
-    private       double validThreshold    = 0.65;
-    private       double positiveThreshold = 0.60;
-    private       double negativeThreshold = 0.5;
 
-    public NearestNeighbor(List<ScanningBoundingBoxes> scanBoxes, int patchSize ) {
-        this.scanningBoundingBoxeses = scanBoxes;
+    private final int                           patchSize;
+    private       double                        validThreshold          = 0.65;
+    private       double                        positiveThreshold       = 0.60;
+    private       double                        negativeThreshold       = 0.5;
+
+    public NearestNeighbor( int patchSize ) {
         this.patchSize = patchSize;
     }
 
@@ -29,11 +26,22 @@ public class NearestNeighbor {
         return validThreshold;
     }
 
-    public void init (IplImage image, List<BoundingBox> bestOverlaps, List<BoundingBox> worstOverlaps) {
+    public void init (IplImage image,
+                      List<BoundingBox> bestOverlaps,
+                      List<BoundingBox> worstOverlaps ) {
 
+        validThreshold      = 0.65;
+        positiveThreshold   = 0.60;
+        negativeThreshold   = 0.5;
+        this.positivePatchPatterns.clear();
+        this.negativePatchPatterns.clear();
+        train( image, bestOverlaps, worstOverlaps );
+    }
 
-        //List<Map<IplImage,float[]>
-        //List<Map>
+    public void train (IplImage image,
+                       List<BoundingBox> bestOverlaps,
+                       List<BoundingBox> worstOverlaps ) {
+
         List<float[]>  positivePatchPatterns = getPositivePatchPatterns( image, bestOverlaps.get(0), patchSize );
         List<float[]>  negativePatchPatterns = getNegativePatchPatterns( image, worstOverlaps, patchSize );
 
@@ -48,8 +56,6 @@ public class NearestNeighbor {
         patches.add(0,positivePatchPatterns.get(0));
 
         for( float[] patch : patches ) {
-
-
             //Since we know the patch is apriori a Positive or Negative patch..
             //AND we look at the Similarity (0 being similar to a negative, 1 being similar to a positive)
             //We say: If it's a Positive Patch, but more similar to a negative patch.. we want to add it to
