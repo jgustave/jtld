@@ -1,7 +1,6 @@
 package com.gong.jtld;
 
 import com.googlecode.javacv.cpp.opencv_core.CvMat;
-import com.googlecode.javacv.cpp.opencv_features2d;
 import com.googlecode.javacv.cpp.opencv_imgproc;
 import org.apache.commons.math.stat.descriptive.rank.Median;
 
@@ -638,61 +637,62 @@ public class Utils {
      */
     public static List<BoundingBox> getBestOverlappingScanBoxes( BoundingBox boundingBox,
                                                                  List<ScanningBoundingBoxes> testBoundingBoxes,
-                                                                 int maxBoxes,
+                                                                 int maxResults,
                                                                  float minCutoff ) {
 
-        //BUGBUG: This isn't strictly correct... need to handle duplicate overlaps
-        TreeMap<Float,BoundingBox> closestMap = new TreeMap<Float, BoundingBox>();
+        TreeMap<Float,List<BoundingBox>> closestMap = new TreeMap<Float, List<BoundingBox>>();
 
         //Look at every Scan.BB
         for(ScanningBoundingBoxes boxes : testBoundingBoxes ) {
             for( BoundingBox box : boxes.boundingBoxes ) {
                 float overlap = boundingBox.overlap(box);
                 if( overlap > minCutoff ) {
-                    closestMap.put( overlap, box );
+                    List<BoundingBox> boxList = closestMap.get(overlap);
+                    if( boxList == null ) {
+                        boxList = new ArrayList<BoundingBox>();
+                        closestMap.put( overlap, boxList );
+                    }
+                    boxList.add( box );
                 }
             }
         }
 
+        //Now we reduce to the maxBoxes
         List<BoundingBox> closestList = new ArrayList<BoundingBox>();
-        for( int x=0;x<maxBoxes;x++) {
+        while(closestList.size() < maxResults ) {
             if( closestMap.size() == 0 ) {
                 break;
             }
-            closestList.add( closestMap.pollFirstEntry().getValue() );
+            //We might get a little extra... that's ok.
+            closestList.addAll( closestMap.pollFirstEntry().getValue() );
         }
-
         return( closestList );
     }
 
+    /**
+     * Get ALL of the worst overlapping BB's that are < than maxcutoff overlap
+     * We will shuffle and select later
+     * @param boundingBox
+     * @param testBoundingBoxes
+     * @param maxCutoff
+     * @return
+     */
     public static List<BoundingBox> getWorstOverlappingScanBoxes (BoundingBox boundingBox,
                                                                    List<ScanningBoundingBoxes> testBoundingBoxes,
-                                                                   int maxResults,
                                                                    float maxCutoff ) {
 
-        //BUGBUG: This isn't strictly correct... need to handle duplicate overlaps
-        TreeMap<Float,BoundingBox> closestMap = new TreeMap<Float, BoundingBox>();
+        List<BoundingBox> worstList = new ArrayList<BoundingBox>(256);
 
         //Look at every Scan.BB
         for(ScanningBoundingBoxes boxes : testBoundingBoxes ) {
             for( BoundingBox box : boxes.boundingBoxes ) {
                 float overlap = boundingBox.overlap(box);
                 if( overlap < maxCutoff ) {
-                    closestMap.put( overlap, box );
+                    worstList.add( box );
                 }
             }
         }
-
-        List<BoundingBox> worstList = new ArrayList<BoundingBox>();
-        for( int x=0;x<maxResults;x++) {
-            if( closestMap.size() == 0 ) {
-                break;
-            }
-            worstList.add(closestMap.pollFirstEntry().getValue());
-        }
-        Collections.shuffle( worstList );
-
-        return( worstList.subList(0, Math.min(maxResults,worstList.size() ) ) );
+        return( worstList );
     }
 
     public static float min (float[] vals) {

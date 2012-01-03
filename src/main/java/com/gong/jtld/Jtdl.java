@@ -8,6 +8,8 @@ import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_highgui.cvConvertImage;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvIntegral;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -52,6 +54,10 @@ public class Jtdl {
     private      CvMat      iisum   = null;
     private      CvMat      iisqsum = null;
 
+    private final   CvScalar   mean     = new CvScalar(1);
+    private final   CvScalar   stdDev   = new CvScalar(1);
+    private         double     variance = 0.0;
+
     @SuppressWarnings ({"unchecked"})
     public Jtdl( ) {
         fern            = new Fern( numFerns, featuresPerFern );
@@ -78,6 +84,11 @@ public class Jtdl {
         cvConvertImage( initialImage, grayScaleImage, 0 );
         cvIntegral(grayScaleImage, iisum, iisqsum, null );
 
+        cvAvgSdv( grayScaleImage, mean, stdDev, null );
+
+        variance = stdDev.getVal(0) * stdDev.getVal(0) * 0.5;
+//        double fooV = Utils.getVariance(initialBoundingBox,iisum,iisqsum)*0.5;
+//        System.out.println("Var:" + variance + " foo:" + fooV );
 
         scanningBoundingBoxesList = BoundingBox.createTestBoxes( initialBoundingBox,
                                                                  SCALES,
@@ -92,17 +103,47 @@ public class Jtdl {
                                                                              minOverlapCutoff );
         List<ScaledBoundingBox> worstOverlaps = (List)Utils.getWorstOverlappingScanBoxes( initialBoundingBox,
                                                                               scanningBoundingBoxesList,
-                                                                              maxWorstBoxes,
                                                                               maxOverlapCutoff );
-        List<ScaledBoundingBox> variedWorstOverlaps = getVariantOverlaps(initialImage, worstOverlaps);
+        Collections.shuffle( worstOverlaps ); //for random test/train split
+        List<ScaledBoundingBox> variedWorstOverlaps = getVariantOverlaps(grayScaleImage, worstOverlaps);
 
-        nearestNeighbor.init(grayScaleImage, (List)bestOverlaps, (List)worstOverlaps );
+        //TODO: BUG BUG online has them all.. but here we dont.. not sure why
+        worstOverlaps = worstOverlaps.subList(0,Math.min(100,worstOverlaps.size()));
+        variedWorstOverlaps = variedWorstOverlaps.subList(0,Math.min(100,variedWorstOverlaps.size()));
 
-        fern.init(grayScaleImage, initialBoundingBox, bestOverlaps, variedWorstOverlaps );
+
+        List<ScaledBoundingBox> trainWorstOverlaps       = worstOverlaps.subList(0, worstOverlaps.size()/2 );
+        List<ScaledBoundingBox> trainVariedWorstOverlaps = variedWorstOverlaps.subList(0, variedWorstOverlaps.size()/2 );
+        List<ScaledBoundingBox> testWorstOverlaps        = worstOverlaps.subList(worstOverlaps.size()/2, worstOverlaps.size() );
+        List<ScaledBoundingBox> testVariedWorstOverlaps  = variedWorstOverlaps.subList(variedWorstOverlaps.size() / 2, variedWorstOverlaps.size());
+
+        //Split the negative examples into train and test sets.
+        //Fern only wants highly variant negatives.. NN wants all.
+        //But keep all the positive examples.
+        //Save the test sets to update thresholds.
+
+        nearestNeighbor.init(grayScaleImage, (List)bestOverlaps, (List)trainWorstOverlaps );
+        fern.init(grayScaleImage, initialBoundingBox, bestOverlaps, trainVariedWorstOverlaps );
+
+        //Update thresholds
+        nearestNeighbor.updateNearestNeighborThreshold( grayScaleImage, testWorstOverlaps );
+        fern.updateMinThreshold( grayScaleImage, testVariedWorstOverlaps );
     }
 
-    private List<ScaledBoundingBox> getVariantOverlaps (IplImage initialImage, List<ScaledBoundingBox> worstOverlaps) {
-        return( worstOverlaps );
+    /**
+     * We only want worst overlaps if they are highly variant.. meaning they have information in them.
+     * @param image
+     * @param worstOverlaps
+     * @return
+     */
+    private List<ScaledBoundingBox> getVariantOverlaps (IplImage image, List<ScaledBoundingBox> worstOverlaps ) {
+        List<ScaledBoundingBox> result = new ArrayList<ScaledBoundingBox>();
+        for( ScaledBoundingBox box : worstOverlaps ) {
+            if( Utils.getVariance( box, iisum, iisqsum ) > variance * 0.5 ) {
+                result.add( box );
+            }
+        }
+        return( result );
     }
 
     @SuppressWarnings ({"unchecked"})
@@ -118,12 +159,19 @@ public class Jtdl {
                                                                              minOverlapCutoff );
         List<ScaledBoundingBox> worstOverlaps = (List)Utils.getWorstOverlappingScanBoxes( updatedBoundingBox,
                                                                               scanningBoundingBoxesList,
-                                                                              maxWorstBoxes,
                                                                               maxOverlapCutoff );
+        Collections.shuffle( worstOverlaps );
         List<ScaledBoundingBox> variedWorstOverlaps = getVariantOverlaps(grayScaleImage, worstOverlaps);
 
-        nearestNeighbor.train(grayScaleImage, (List) bestOverlaps, (List) worstOverlaps);
+        //TODO: BUG BUG online has them all.. but here we dont.. not sure why
+        worstOverlaps = worstOverlaps.subList(0,Math.min(100,worstOverlaps.size()));
+        variedWorstOverlaps = variedWorstOverlaps.subList(0,Math.min(100,variedWorstOverlaps.size()));
 
+        ScaledBoundingBox bestBox = bestOverlaps.get(0);
+        System.out.println("BestNN:" + nearestNeighbor.getFoo(grayScaleImage, bestBox).relativeSimilarity);
+        System.out.println("BestFern:" + fern.measureVotes( grayScaleImage, bestBox ) );
+
+        nearestNeighbor.train(grayScaleImage, (List) bestOverlaps, (List) worstOverlaps);
         fern.train(grayScaleImage, updatedBoundingBox, bestOverlaps, variedWorstOverlaps);
     }
 

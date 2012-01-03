@@ -53,7 +53,6 @@ public class TestInit {
                                                                              0.6f );
         List<BoundingBox> worstOverlaps = Utils.getWorstOverlappingScanBoxes( boundingBox,
                                                                               testBoundingBoxes,
-                                                                              100,
                                                                               0.2f );
 
 
@@ -116,7 +115,6 @@ public class TestInit {
                                                                        0.6f );
                     worstOverlaps = Utils.getWorstOverlappingScanBoxes( updatedBoundingBox,
                                                                         testBoundingBoxes,
-                                                                        100,
                                                                         0.2f );
 
                     nearestNeighbor.init( nextGray, bestOverlaps, worstOverlaps );

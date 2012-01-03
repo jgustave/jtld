@@ -42,6 +42,7 @@ public class NearestNeighbor {
                        List<BoundingBox> bestOverlaps,
                        List<BoundingBox> worstOverlaps ) {
 
+        //TODO: optimize, reuse patch mem don't acucmulate list
         List<float[]>  positivePatchPatterns = getPositivePatchPatterns( image, bestOverlaps.get(0), patchSize );
         List<float[]>  negativePatchPatterns = getNegativePatchPatterns( image, worstOverlaps, patchSize );
 
@@ -86,15 +87,16 @@ public class NearestNeighbor {
         }
     }
 
+    public void updateNearestNeighborThreshold(IplImage image, List<ScaledBoundingBox> negativeBoxes ) {
 
-    public void updateNearestNeighborThreshold(List<float[]> negativePatches ) {
-        for (float[] negativePatch : negativePatches) {
+        for( BoundingBox box : negativeBoxes ) {
+            //TODO: optimize re-use patch mem
+            float[] negativePatch = Utils.getPatchPattern( image, box, patchSize );
             NearestNeighbor.Foo foo = getFoo(negativePatch);
             if( foo.relativeSimilarity > positiveThreshold ) {
                 positiveThreshold =  foo.relativeSimilarity;
             }
         }
-
         if( positiveThreshold > validThreshold ) {
             validThreshold =  positiveThreshold;
         }

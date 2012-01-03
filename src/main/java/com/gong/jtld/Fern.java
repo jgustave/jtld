@@ -6,7 +6,6 @@ import com.googlecode.javacv.cpp.opencv_features2d.PatchGenerator;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 import com.googlecode.javacv.cpp.opencv_features2d;
 
-import static com.googlecode.javacv.cpp.opencv_core.cvCopy;
 import static com.googlecode.javacv.cpp.opencv_core.cvResetImageROI;
 import static com.googlecode.javacv.cpp.opencv_core.cvSetImageROI;
 import static com.googlecode.javacv.cpp.opencv_imgproc.CV_GAUSSIAN;
@@ -30,7 +29,7 @@ public class Fern {
 
     //private final List<int[]> positiveFeatures = new ArrayList<int[]>();
     //private final List<int[]> negativeFeatures = new ArrayList<int[]>();
-    private float minThreshold;
+    private float minThreshold = 0.6f;
     private float negativeThreshold;
     private float positiveThreshold;
     private final int numFerns;
@@ -170,14 +169,6 @@ public class Fern {
         for(ScaledBoundingBox box : worstBoxes ) {
             //IplImage badImage = Utils.getImagePatch( image, box );
             cvSetImageROI( image, box.getRect() );
-
-            //TODO: variance:
-////If there isn't much variance in the image, then don't bother.. not a good example
-//            if (getVar(grid[idx],iisum,iisqsum)<var*0.5f) {
-//                  continue;
-//            }
-
-
             negativeFeatures.add(getFeatures( image, box.scaleIndex ) );
         }
         cvResetImageROI( image );
@@ -203,19 +194,6 @@ public class Fern {
         }
         return( ferns );
     }
-//    public int[] getFeatures( IplImage image, ScaledBoundingBox boundingBox ) {
-//        int[] ferns = new int[this.numFerns];
-//        int fern = 0;
-//        for( int x=0;x<numFerns;x++) {
-//            fern = 0;
-//            for( int y=0;y<this.featuresPerFern;y++) {
-//                fern <<= 1;
-//                fern |= features[boundingBox.getScaleIndex()][x*this.featuresPerFern+y].eval(image);
-//            }
-//            ferns[x] = fern;
-//        }
-//        return( ferns );
-//    }
 
     /**
      * Given ferns, and each ferns posterior probability, ADD together the votes
@@ -229,6 +207,9 @@ public class Fern {
             votes += posteriors[x][ferns[x]];
         }
         return( votes );
+    }
+    public float measureVotes( IplImage image, ScaledBoundingBox boundingBox ) {
+        return( measureVotes( getFeatures( image, boundingBox.scaleIndex ) ) );
     }
 
     public void updatePosterior(boolean isPositive, int[] ferns ){
@@ -255,10 +236,12 @@ public class Fern {
         }
     }
 
-    public void updateMinThreshold(List<int[]> negativeFeatures ){
+    public void updateMinThreshold(IplImage image, List<ScaledBoundingBox> negativeBoxes ) {
+        //TODO: optimze ..reuse int[] memory
         float threshold = 0.0f;
-        for (int[] negativeFeature : negativeFeatures) {
-            threshold = measureVotes(negativeFeature) / numFerns;
+        for( ScaledBoundingBox negativeBox : negativeBoxes ) {
+            int[] negativeFeatures = getFeatures( image, negativeBox.scaleIndex );
+            threshold = measureVotes(negativeFeatures) / numFerns;
             if (threshold > minThreshold) {
                 minThreshold = threshold;
             }
@@ -269,9 +252,9 @@ public class Fern {
 
         positiveThreshold = minThreshold*numFerns;
 
-        Set<int[]> negativo = new HashSet<int[]>();
-        for( int[] neg : negativeFeatures ) {
-            negativo.add( neg );
+        Set<int[]> positivo = new HashSet<int[]>();
+        for( int[] positive : positiveFeatures ) {
+            positivo.add( positive );
         }
         List<int[]> foo = new ArrayList<int[]>();
         foo.addAll( negativeFeatures );
@@ -279,10 +262,14 @@ public class Fern {
         Collections.shuffle( foo );
 
         for( int[] sample : foo ) {
-            if( negativo.contains( sample ) ) {
-                updatePosterior( false, sample );
+            if( positivo.contains( sample ) ) {
+                if( measureVotes( sample ) <= positiveThreshold ) {
+                    updatePosterior( true, sample );
+                }
             }else {
-                updatePosterior( true, sample );
+                if( measureVotes( sample ) >= negativeThreshold ) {
+                    updatePosterior( false, sample );
+                }
             }
         }
     }
