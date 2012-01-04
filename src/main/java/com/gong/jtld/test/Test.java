@@ -1,9 +1,6 @@
 package com.gong.jtld.test;
 
-import com.gong.jtld.BoundingBox;
-import com.gong.jtld.Tracker;
-import com.gong.jtld.TrackerResult;
-import com.gong.jtld.Utils;
+import com.gong.jtld.*;
 import com.sun.corba.se.impl.logging.UtilSystemException;
 
 import static com.googlecode.javacv.cpp.opencv_core.*;
@@ -19,80 +16,49 @@ public class Test {
         System.out.println("Helloo!");
         System.out.println("Path:" + System.getProperty("java.library.path") );
 
-        IplImage image1 = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00001.png", CV_LOAD_IMAGE_GRAYSCALE);
-        IplImage image2 = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00002.png", CV_LOAD_IMAGE_GRAYSCALE);
-        IplImage imgC   = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00001.png", CV_LOAD_IMAGE_UNCHANGED);
-        IplImage imgD   = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00002.png", CV_LOAD_IMAGE_UNCHANGED);
+
+        IplImage img1   = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00002.png", CV_LOAD_IMAGE_GRAYSCALE);
+        IplImage img2   = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00005.png", CV_LOAD_IMAGE_GRAYSCALE);
+        IplImage img3   = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00008.png", CV_LOAD_IMAGE_GRAYSCALE);
+
+        BoundingBox boundingBox1 = new BoundingBox(285,40,315,115); //00002
+        BoundingBox boundingBox2 = new BoundingBox(300,30,335,105); //00005
+        BoundingBox boundingBox3 = new BoundingBox(320,65,355,140); //00008
+
+        Jtdl jtdl = new Jtdl();
+        jtdl.init( img1, boundingBox1 );
+
+        BoundingBox boundingBox1a =Utils.getBestOverlappingScanBoxes( boundingBox1, jtdl.scanningBoundingBoxesList, 1, 0.6f ).get(0);
+        BoundingBox boundingBox2a =Utils.getBestOverlappingScanBoxes( boundingBox2, jtdl.scanningBoundingBoxesList, 1, 0.6f ).get(0);
+        BoundingBox boundingBox3a =Utils.getBestOverlappingScanBoxes( boundingBox3, jtdl.scanningBoundingBoxesList, 1, 0.6f ).get(0);
+
+        System.out.println("Fern:" + jtdl.fern.measureVotesDebug( img1, (ScaledBoundingBox)boundingBox1a ) );
+        System.out.println("Fern:" + jtdl.fern.measureVotesDebug( img2, (ScaledBoundingBox)boundingBox2a ) );
+        System.out.println("Fern:" + jtdl.fern.measureVotesDebug( img3, (ScaledBoundingBox)boundingBox3a ) );
+
+        jtdl.learn( img2, boundingBox2a );
+
+        System.out.println("Fern:" + jtdl.fern.measureVotesDebug( img1, (ScaledBoundingBox)boundingBox1a ) );
+        System.out.println("Fern:" + jtdl.fern.measureVotesDebug( img2, (ScaledBoundingBox)boundingBox2a ) );
+        System.out.println("Fern:" + jtdl.fern.measureVotesDebug( img3, (ScaledBoundingBox)boundingBox3a ) );
+
+
 //
-//        Tracker tracker     = new Tracker();
-        BoundingBox boundingBox = new BoundingBox(285,25,315,90);
-//        TrackerResult result      = tracker.track(image1, image2, boundingBox );
-//
-//        // Make an image of the results
-//
-//        //Draw the bounding box
 //        cvRectangle(
-//                imgC,
+//                imgD,
 //                cvPoint(Math.round(boundingBox.x1), Math.round(boundingBox.y1)),
 //                cvPoint(Math.round(boundingBox.x2), Math.round(boundingBox.y2)),
 //                CV_RGB(0, 255, 0), 1, 8, 0);
 //
-//        //Display valid tracks.
-//        for (int i = 0; i < result.featuresFound.length; i++) {
-//            if (result.featuresFound[i] == 0 || result.featureErrors[i] > 100) {
-//                continue;
-//            }
+////        result.destroy();
 //
-//            result.origPoints.position(i);
-//            result.foundPoints.position(i);
-//
-//            CvPoint p0 = cvPoint(Math.round(result.origPoints.x()), Math.round(result.origPoints.y()));
-//            CvPoint p1 = cvPoint(Math.round(result.foundPoints.x()), Math.round(result.foundPoints.y()));
-//
-//            if( result.forwardBackwardError[i] < 1 ) {
-//                cvLine(imgC,
-//                   p0,
-//                   p1,
-//                   CV_RGB(255, 0, 0), 1, 8, 0);
-//                cvCircle( imgC,
-//                          cvPoint(Math.round(result.origPoints.x()), Math.round(result.origPoints.y())),
-//                          1,
-//                          CV_RGB(0, 0, 255), 1, 8, 0 );
-//            }
-//        }
-//
-//        float   medianForwardBackwardError = (float) Utils.medianIgnoreNan(result.forwardBackwardError);
-//        float   medianNormCrossCorrelation = (float)Utils.medianIgnoreNan( result.normCrossCorrelation );
-//
-//        //Now find which of our results were valid, and save the indexes for later
-//        int     numValidIndexes = 0;
-//        int[]   tempIndexes    = new int[result.getNumPoints()];
-//        for( int x=0;x<result.getNumPoints();x++) {
-//            if( result.forwardBackwardError[x] < medianForwardBackwardError  && result.normCrossCorrelation[x] > medianNormCrossCorrelation ) {
-//                tempIndexes[numValidIndexes] = x;
-//                numValidIndexes++;
-//            }
-//        }
-//        int[]   validIndexes   = new int[numValidIndexes];
-//        System.arraycopy(tempIndexes,0,validIndexes,0,numValidIndexes);
-//
-//        BoundingBox updatedBoundingBox = predictBoundingBox( boundingBox, result, validIndexes );
-//        System.out.println("Orig:" + boundingBox + " new:" + updatedBoundingBox );
-//        cvRectangle(
-//                imgD,
-//                cvPoint(Math.round(updatedBoundingBox.x1), Math.round(updatedBoundingBox.y1)),
-//                cvPoint(Math.round(updatedBoundingBox.x2), Math.round(updatedBoundingBox.y2)),
-//                CV_RGB(0, 255, 0), 1, 8, 0);
-//
-//        result.destroy();
-
-        imgD = Utils.getImagePatch( imgC, boundingBox );
-        cvSaveImage("/tmp/image0-1.png", imgC);
-        cvSaveImage("/tmp/image0-2.png", imgD);
-        cvNamedWindow( "LKpyr_OpticalFlow", 0 );
-        cvShowImage( "LKpyr_OpticalFlow", imgC );
-        cvShowImage( "LKpyr_OpticalFlow-2", imgD );
-        cvWaitKey(0);
+//        //imgD = Utils.getImagePatch( imgC, boundingBox );
+////        cvSaveImage("/tmp/image0-1.png", imgC);
+////        cvSaveImage("/tmp/image0-2.png", imgD);
+////        cvNamedWindow( "LKpyr_OpticalFlow", 0 );
+////        cvShowImage( "LKpyr_OpticalFlow", imgC );
+//        cvShowImage( "LKpyr_OpticalFlow-2", imgD );
+//        cvWaitKey(0);
     }
 
     /**

@@ -34,7 +34,8 @@ public class Fern {
     private float positiveThreshold;
     private final int numFerns;
     private final int featuresPerFern;
-    private final int numWarps = 10;
+    private final int numWarpsInit   = 20;
+    private final int numWarpsUpdate = 20;
 
 
     //[Scale][numFerns*featuresPerFern]  since we want to recognize the object at multiple scales
@@ -45,6 +46,8 @@ public class Fern {
     private final int[][]     positiveCounter;
     private final int[][]     negativeCounter;
     private final float[][]   posteriors;
+
+    private       boolean     isFirst   = false;
 
     public Fern (int numFerns, int featuresPerFern ) {
         //Various scaling factors of the initialBB
@@ -59,24 +62,29 @@ public class Fern {
         this.negativeCounter    = new int[numFerns][(int)Math.pow(2,featuresPerFern)];
         this.posteriors         = new float[numFerns][(int)Math.pow(2,featuresPerFern)];
 
+        double scaling = 0.02;
+        double theta   = 20.0;
+        double phi     = 20.0;
+
 
         opencv_features2d.LDetector unusedBugWorkAround = new opencv_features2d.LDetector();
         generator = new opencv_features2d.PatchGenerator(0.0, //background min
-                                                        0.0, //background max
-                                                        5.0,  //noise range
-                                                        true, //random blur
-                                                        1.0-0.02,//lambda (min scaling)
-                                                        1.0+0.02,//max scaling
-                                                        -20.0*Math.PI/180.0, //theta
-                                                        20.0*Math.PI/180.0,
-                                                        -20.0*Math.PI/180.0, //phi
-                                                        20.0*Math.PI/180.0);
+                                                         0.0, //background max
+                                                         5.0,  //noise range
+                                                         true, //random blur
+                                                         1.0-scaling,//lambda (min scaling)
+                                                         1.0+scaling,//max scaling
+                                                         -theta*Math.PI/180.0, //theta
+                                                         theta*Math.PI/180.0,
+                                                         -phi*Math.PI/180.0, //phi
+                                                         phi*Math.PI/180.0);
     }
 
     public void init(IplImage initialImage,
                      BoundingBox initialBox,
                      List<ScaledBoundingBox> bestBoxes,
                      List<ScaledBoundingBox> variedWorstOverlaps) {
+        this.isFirst            = false;
         this.negativeThreshold  = 0.5f*numFerns;
         this.positiveThreshold  = 0.5f*numFerns;
         int totalFeatures       = numFerns * featuresPerFern;
@@ -93,10 +101,10 @@ public class Fern {
 
             //Features at different scales
             for( int y=0;y<SCALES.length;y++) {
-                Feature feature = new Feature( (int)(width * rand1),
-                                               (int)(height * rand2),
-                                               (int)(width * rand3),
-                                               (int)(height * rand4)  );
+                Feature feature = new Feature( (int)(width*SCALES[y] * rand1),
+                                               (int)(height*SCALES[y] * rand2),
+                                               (int)(width*SCALES[y] * rand3),
+                                               (int)(height*SCALES[y] * rand4)  );
                 features[y][x] = feature;
             }
         }
@@ -139,18 +147,24 @@ public class Fern {
 
         cvSmooth( image, smoothImage, CV_GAUSSIAN, 9,9, 1.5, 1.5 );
 
+        int numWarps = isFirst?numWarpsInit:numWarpsUpdate;
+        isFirst = false;
 
 //This morph doesn't work as well...
 //        patch = smoothImage.clone();
-//        for( int x=0;x<10*numWarps;x++) {
+//        for( int x=0;x<numWarps;x++) {
 //            cvResetImageROI( patch );
 //            cvSetImageROI( patch, hullBox.getRect() );
-//            generator.generate( smoothImage, hullBox.getCenter(), patch, hullBox.getSize(), rng );
+//            generator.generate( smoothImage,
+//                                hullBox.getCenter(),
+//                                patch,
+//                                hullBox.getSize(),
+//                                rng );
 //            cvResetImageROI( patch );
 //            cvSetImageROI( patch, bestBoxes.get(0).getRect() );
 //            positiveFeatures.add( getFeatures( patch, bestBoxes.get(0).scaleIndex ) );
 //        }
-//
+
 
         patch = Utils.getImagePatch(smoothImage, bestBoxes.get(0) );
 
@@ -249,7 +263,7 @@ public class Fern {
             if( positiveCounter[x][index] == 0 ){
                 posteriors[x][index]=0; //anti div by zero
             }else{
-                posteriors[x][index]= (float)positiveCounter[x][index]/(float)(positiveCounter[x][index] + negativeCounter[x][index]);
+                posteriors[x][index]= ((float)positiveCounter[x][index])/((float)(positiveCounter[x][index] + (float)negativeCounter[x][index]));
             }
         }
     }
@@ -348,6 +362,9 @@ public class Fern {
             int         widthStep = image.widthStep();
             BytePointer imageData = image.imageData();
             return( (imageData.get(widthStep*y1+x1) > imageData.get(widthStep*y2+x2))?1:0 );
+        }
+        public String toString() {
+            return("Feature [" +x1 + "," + y1 + "] [" + x2 + "," + y2 + "]" );
         }
     }
 }

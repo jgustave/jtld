@@ -41,7 +41,7 @@ public class Jtdl {
     public       List<ScanningBoundingBoxes>    scanningBoundingBoxesList;
 
     //Various Parameters
-    private int     numFerns                = 10;
+    private int     numFerns                = 20;
     private int     featuresPerFern         = 13; //numFerns*(2^featuresPerFern) space
     private int     patchSize               = 25;
     private int     minWindowSize           = 24;
@@ -80,8 +80,8 @@ public class Jtdl {
             iisum.release();
             iisqsum.release();
         }
-        iisum       = opencv_core.CvMat.create(initialImage.height() + 1, initialImage.width() + 1, CV_32F, 1);
-        iisqsum     = opencv_core.CvMat.create(initialImage.height() + 1, initialImage.width() + 1, CV_64F, 1);
+        iisum          = opencv_core.CvMat.create(initialImage.height() + 1, initialImage.width() + 1, CV_32F, 1);
+        iisqsum        = opencv_core.CvMat.create(initialImage.height() + 1, initialImage.width() + 1, CV_64F, 1);
         grayScaleImage = IplImage.create( initialImage.width(), initialImage.height(), IPL_DEPTH_8U, 1 );
 
         cvConvertImage( initialImage, grayScaleImage, 0 );
@@ -109,7 +109,7 @@ public class Jtdl {
         List<ScaledBoundingBox> variedWorstOverlaps = getVariantOverlaps(grayScaleImage, worstOverlaps);
 
         //TODO: BUG BUG online has them all.. but here we dont.. not sure why
-        worstOverlaps = worstOverlaps.subList(0,Math.min(100,worstOverlaps.size()));
+        worstOverlaps       = worstOverlaps.subList(0,Math.min(100,worstOverlaps.size()));
         variedWorstOverlaps = variedWorstOverlaps.subList(0,Math.min(100,variedWorstOverlaps.size()));
 
 
