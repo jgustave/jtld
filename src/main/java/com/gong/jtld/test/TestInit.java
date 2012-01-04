@@ -87,13 +87,13 @@ public class TestInit {
             if( validIndexes.length > 0 ) {
                 updatedBoundingBox = Tracker.predictBoundingBox(boundingBox, result, validIndexes);
 
-                foo = nearestNeighbor.getFoo( nextGray, updatedBoundingBox );
+                foo = nearestNeighbor.getFooDebug( nextGray, updatedBoundingBox );
                 BoundingBox fakeBox = new BoundingBox(10,
                                                       updatedBoundingBox.y1,
                                                       10+updatedBoundingBox.getWidth(),
                                                       updatedBoundingBox.y2 );
                 if( !fakeBox.isOutsideImage( nextGray ) ) {
-                    NearestNeighbor.Foo fakeFoo = nearestNeighbor.getFoo( nextGray, fakeBox );
+                    NearestNeighbor.Foo fakeFoo = nearestNeighbor.getFooDebug( nextGray, fakeBox );
                     cvPutText( next,
                                "" + fakeFoo.relativeSimilarity,
                                cvPoint(30,90),

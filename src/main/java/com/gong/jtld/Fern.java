@@ -141,16 +141,16 @@ public class Fern {
 
 
 //This morph doesn't work as well...
-        patch = smoothImage.clone();
-        for( int x=0;x<10*numWarps;x++) {
-            cvResetImageROI( patch );
-            cvSetImageROI( patch, hullBox.getRect() );
-            generator.generate( smoothImage, hullBox.getCenter(), patch, hullBox.getSize(), rng );
-            cvResetImageROI( patch );
-            cvSetImageROI( patch, bestBoxes.get(0).getRect() );
-            positiveFeatures.add( getFeatures( patch, bestBoxes.get(0).scaleIndex ) );
-        }
-
+//        patch = smoothImage.clone();
+//        for( int x=0;x<10*numWarps;x++) {
+//            cvResetImageROI( patch );
+//            cvSetImageROI( patch, hullBox.getRect() );
+//            generator.generate( smoothImage, hullBox.getCenter(), patch, hullBox.getSize(), rng );
+//            cvResetImageROI( patch );
+//            cvSetImageROI( patch, bestBoxes.get(0).getRect() );
+//            positiveFeatures.add( getFeatures( patch, bestBoxes.get(0).scaleIndex ) );
+//        }
+//
 
         patch = Utils.getImagePatch(smoothImage, bestBoxes.get(0) );
 
@@ -222,6 +222,13 @@ public class Fern {
         return( measureVotes( getFeatures( patch, boundingBox.scaleIndex ) ) );
         //TODO: clean up memory
     }
+    public float measureVotes( IplImage image, ScaledBoundingBox boundingBox ) {
+        IplImage    patch          = null;
+        patch = Utils.getImagePatch( image, boundingBox );
+        return( measureVotes( getFeatures( patch, boundingBox.scaleIndex ) ) );
+        //TODO: clean up memory
+    }
+
 
     public void updatePosterior(boolean isPositive, int[] ferns ){
 
@@ -240,7 +247,7 @@ public class Fern {
             }
 
             if( positiveCounter[x][index] == 0 ){
-                posteriors[x][index]=0;
+                posteriors[x][index]=0; //anti div by zero
             }else{
                 posteriors[x][index]= (float)positiveCounter[x][index]/(float)(positiveCounter[x][index] + negativeCounter[x][index]);
             }
@@ -275,24 +282,43 @@ public class Fern {
         for( int[] sample : foo ) {
             float vote = measureVotes( sample );
             if( positivo.contains( sample ) ) {
-                if( vote <= positiveThreshold ) {
+                //if( vote <= positiveThreshold ) {
                     updatePosterior( true, sample );
-                }
+                //}
             }else {
-                if( vote >= negativeThreshold ) {
+                //if( vote >= negativeThreshold ) {
                     updatePosterior( false, sample );
-                }
+                //}
             }
         }
     }
 
     public void dump() {
-        for( int x=0;x<posteriors.length;x++) {
-            for( int y=0;y<posteriors[x].length;y++) {
-                if( posteriors[x][y] != 0.0 ) {
-                    System.out.println("Got: " +x + " " + y + " :" + posteriors[x][y] );
+//        for( int x=0;x<posteriors.length;x++) {
+//            for( int y=0;y<posteriors[x].length;y++) {
+//                if( posteriors[x][y] != 0.0 ) {
+//                    System.out.println("Got: " +x + " " + y + " :" + posteriors[x][y] );
+//                }
+//            }
+//        }
+//
+        int numVals = (int)Math.pow(2,featuresPerFern);
+        for( int x=0;x<numFerns;x++) {
+            int[] pCount = new int[featuresPerFern];
+            int[] nCount = new int[featuresPerFern];
+            for( int y=0;y<numVals;y++) {
+                for( int z=0;z<featuresPerFern;z++) {
+                    //See if the z bit is set in y
+                    if( ( y & (0x00000001<<z)) != 0 ) {
+                    //if( bitIsSet(z, y)) {
+                        pCount[z] += positiveCounter[x][y];
+                        nCount[z] += negativeCounter[x][y];
+                    }
                 }
             }
+            System.out.println("Fern:" + x );
+            System.out.println("PositiveCounts:" + Arrays.toString( pCount));
+            System.out.println("NegativeCounts:" + Arrays.toString( nCount));
         }
     }
 

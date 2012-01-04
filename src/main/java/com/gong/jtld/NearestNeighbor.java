@@ -160,7 +160,7 @@ public class NearestNeighbor {
         return( new Foo(relativeSimilarity, conservativeSimilarity) );
     }
 
-    public Foo getFoo (IplImage image, BoundingBox boundingBox) {
+    public Foo getFooDebug (IplImage image, BoundingBox boundingBox) {
         float[] patchPattern = Utils.getPatchPattern( image, boundingBox, patchSize );
         return( getFoo( patchPattern ) );
     }

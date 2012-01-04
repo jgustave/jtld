@@ -52,7 +52,7 @@ public class TestRun {
             if( validIndexes.length > 0 ) {
                 updatedBoundingBox = Tracker.predictBoundingBox( boundingBox, result, validIndexes);
 
-                foo = nearestNeighbor.getFoo( nextGray, updatedBoundingBox );
+                foo = nearestNeighbor.getFooDebug( nextGray, updatedBoundingBox );
                 //TODO: jtdl.fern.measureVotes( nextGray, bestBox )
                 cvPutText( next,
                            "" + foo.relativeSimilarity ,
@@ -106,6 +106,27 @@ public class TestRun {
             //jtdl.fern.dump();
             outputImageNo++;
         }
+
+        jtdl.fern.dump();
+        System.out.println("Searching...");
+        IplImage searchImage = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00001.png", CV_LOAD_IMAGE_GRAYSCALE );
+        jtdl.detect( searchImage );
+
+//        double best = 0.0;
+//        for( ScanningBoundingBoxes boxes : jtdl.scanningBoundingBoxesList ) {
+//            for( ScaledBoundingBox scaledBox : boxes.boundingBoxes ) {
+//                float value = jtdl.fern.measureVotesDebug(searchImage, scaledBox );
+//                if( value > 0.0 ) {
+//                    NearestNeighbor.Foo foo = jtdl.nearestNeighbor.getFooDebug( searchImage, scaledBox );
+//                    if( foo.relativeSimilarity > best ) {
+//                        best = foo.relativeSimilarity;
+//                        System.out.println("Votes:" + value + " " + foo.relativeSimilarity );
+//                        cvSaveImage("/tmp/found-"+ scaledBox + "-v-" + value + "-" +foo.relativeSimilarity+ ".png", Utils.getImagePatch( searchImage, scaledBox ) );
+//                    }
+//                }
+//            }
+//        }
+
     }
 
 

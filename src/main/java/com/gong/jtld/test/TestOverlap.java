@@ -1,8 +1,5 @@
 package com.gong.jtld.test;
-import com.gong.jtld.BoundingBox;
-import com.gong.jtld.Jtdl;
-import com.gong.jtld.TrackerResult;
-import com.gong.jtld.Utils;
+import com.gong.jtld.*;
 import com.googlecode.javacv.cpp.opencv_core;
 import org.junit.Test;
 
@@ -50,10 +47,12 @@ public class TestOverlap {
         jtdl.init( current, boundingBox );
         List vals = Utils.getBestOverlappingScanBoxes( boundingBox, jtdl.scanningBoundingBoxesList, 4, 0.6f );
         List vals2 = Utils.getBestOverlappingScanBoxes( boundingBox, jtdl.scanningBoundingBoxesList, 4, 0.6f );
-        assertEquals( 1.0, ((BoundingBox)vals2.get(0)).overlap((BoundingBox)vals2.get(0)), 0.00001 );
+        assertEquals(1.0, ((BoundingBox) vals2.get(0)).overlap((BoundingBox) vals2.get(0)), 0.00001);
         List vals3 = Utils.getBestOverlappingScanBoxes( (BoundingBox)vals2.get(0), jtdl.scanningBoundingBoxesList, 4, 0.6f );
         assertEquals( vals.get(0), vals2.get(0) );
         assertEquals( vals2.get(0), vals3.get(0) );
         assertEquals( vals.size(), vals3.size() );
+        assertEquals( 10, ((ScaledBoundingBox)vals2.get(0)).getScaleIndex() );
+        assertEquals( 1.0, Jtdl.SCALES[10], .0001 );
     }
 }

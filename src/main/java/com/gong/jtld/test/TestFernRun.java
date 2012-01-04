@@ -36,5 +36,7 @@ public class TestFernRun {
         jtdl.learn( current, bestBox );
         System.out.println("Votes:" + jtdl.fern.measureVotesDebug( currentGray, bestBox ) );
 
+
+
     }
 }

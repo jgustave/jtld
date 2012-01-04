@@ -6,7 +6,10 @@ import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
 import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_highgui.cvConvertImage;
+import static com.googlecode.javacv.cpp.opencv_highgui.cvSaveImage;
+import static com.googlecode.javacv.cpp.opencv_imgproc.CV_GAUSSIAN;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvIntegral;
+import static com.googlecode.javacv.cpp.opencv_imgproc.cvSmooth;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,7 +42,7 @@ public class Jtdl {
 
     //Various Parameters
     private int     numFerns                = 10;
-    private int     featuresPerFern         = 20; //numFerns*(2^featuresPerFern) space
+    private int     featuresPerFern         = 13; //numFerns*(2^featuresPerFern) space
     private int     patchSize               = 25;
     private int     minWindowSize           = 24;
     private int     maxBestBoxes            = 10;
@@ -87,8 +90,6 @@ public class Jtdl {
         cvAvgSdv( grayScaleImage, mean, stdDev, null );
 
         variance = stdDev.getVal(0) * stdDev.getVal(0) * 0.5;
-//        double fooV = Utils.getVariance(initialBoundingBox,iisum,iisqsum)*0.5;
-//        System.out.println("Var:" + variance + " foo:" + fooV );
 
         scanningBoundingBoxesList = BoundingBox.createTestBoxes( initialBoundingBox,
                                                                  SCALES,
@@ -168,14 +169,41 @@ public class Jtdl {
         variedWorstOverlaps = variedWorstOverlaps.subList(0,Math.min(100,variedWorstOverlaps.size()));
 
         ScaledBoundingBox bestBox = bestOverlaps.get(0);
-        System.out.println("BestNN:" + nearestNeighbor.getFoo(grayScaleImage, bestBox).relativeSimilarity);
-        System.out.println("BestFern:" + fern.measureVotesDebug( grayScaleImage, bestBox ) );
+        System.out.println("BestNN:" + nearestNeighbor.getFooDebug(grayScaleImage, bestBox).relativeSimilarity);
+        System.out.println("BestFern:" + fern.measureVotesDebug(grayScaleImage, bestBox) );
 
         nearestNeighbor.train(grayScaleImage, (List) bestOverlaps, (List) worstOverlaps);
         fern.train(grayScaleImage, updatedBoundingBox, bestOverlaps, variedWorstOverlaps);
-        System.out.println("PostBestNN:" + nearestNeighbor.getFoo(grayScaleImage, bestBox).relativeSimilarity);
+        System.out.println("PostBestNN:" + nearestNeighbor.getFooDebug(grayScaleImage, bestBox).relativeSimilarity);
         System.out.println("PostBestFern:" + fern.measureVotesDebug( grayScaleImage, bestBox ) );
     }
 
+    public void detect(IplImage image ) {
+
+
+        cvConvertImage( image, grayScaleImage, 0 );
+        cvIntegral(grayScaleImage, iisum, iisqsum, null );
+        cvSmooth( grayScaleImage, grayScaleImage, CV_GAUSSIAN, 9,9, 1.5, 1.5 );
+        double bestNN = 0.0;
+        for( ScanningBoundingBoxes boxes : scanningBoundingBoxesList ) {
+            for( ScaledBoundingBox scaledBox : boxes.boundingBoxes ) {
+
+                //double testVariance = Utils.getVariance( scaledBox, iisum, iisqsum );
+                //if( testVariance >= variance ) {
+
+                    float value = fern.measureVotes(grayScaleImage, scaledBox );
+                    if( value > 0.0 ) {
+                        NearestNeighbor.Foo foo = nearestNeighbor.getFooDebug( grayScaleImage, scaledBox );
+                        if( foo.relativeSimilarity > bestNN ) {
+                            bestNN = foo.relativeSimilarity;
+                            double testVar = Utils.getVariance( scaledBox, iisum, iisqsum );
+                            System.out.println("Fern:" + value + " NN:" + foo.relativeSimilarity + " var:" + testVar  );
+                            cvSaveImage("/tmp/found-"+ scaledBox + "-v-" + value + "-" +foo.relativeSimilarity+"-var:"+testVar+ ".png", Utils.getImagePatch( grayScaleImage, scaledBox ) );
+                        }
+                    }
+                //}
+            }
+        }
+    }
 
 }
