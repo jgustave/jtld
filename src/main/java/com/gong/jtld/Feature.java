@@ -33,6 +33,7 @@ public class Feature {
         BytePointer imageData = image.imageData();
         int val1 = (imageData.get(widthStep*y1+x1)&0x000000FF);
         int val2 = (imageData.get(widthStep*y2+x2)&0x000000FF);
+
         return( (val1 > val2)?1:0 );
     }
     public String toString() {

@@ -26,6 +26,14 @@ public class NearestNeighbor {
         return validThreshold;
     }
 
+    public void dump() {
+        System.out.println("NN: numP:" + positivePatchPatterns.size() +
+                           " numN:" + negativePatchPatterns.size() +
+                           " vThreshold:" + validThreshold +
+                           " pThreshold:" + positiveThreshold +
+                           " nThreshold:" + negativeThreshold );
+    }
+
     public void init (IplImage image,
                       List<BoundingBox> bestOverlaps,
                       List<BoundingBox> worstOverlaps ) {
@@ -35,7 +43,7 @@ public class NearestNeighbor {
         negativeThreshold   = 0.5;
         this.positivePatchPatterns.clear();
         this.negativePatchPatterns.clear();
-        train( image, bestOverlaps, worstOverlaps );
+        train(image, bestOverlaps, worstOverlaps);
     }
 
     public void train (IplImage image,
@@ -64,22 +72,18 @@ public class NearestNeighbor {
             if( positives.contains(patch) ) {
                 if( this.positivePatchPatterns.size() == 0 ) {
                     this.positivePatchPatterns.add( patch );
-                    //dump( "Positive:" + this.positivePatchPatterns.size(), patch );
                 } else {
                     Foo foo = getFoo(patch);
                     if( foo.relativeSimilarity <= positiveThreshold ) {
                         this.positivePatchPatterns.add( patch );
-                        //dump( "Positive-" + foo.relativeSimilarity +"-" + this.positivePatchPatterns.size(), patch );
                     }
                 }
             }else { //assume negativePatch
                 if( this.negativePatchPatterns.size() == 0 ) {
                     this.negativePatchPatterns.add( patch );
-                    //dump( "Negative:" + this.positivePatchPatterns.size(), patch );
                 }else {
                     Foo foo = getFoo(patch);
                     if( foo.relativeSimilarity > negativeThreshold ) {
-                        //dump( "Negative-" + foo.relativeSimilarity + "-" + this.negativePatchPatterns.size(), patch );
                         this.negativePatchPatterns.add( patch );
                     }
                 }

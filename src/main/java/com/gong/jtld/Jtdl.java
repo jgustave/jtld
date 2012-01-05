@@ -49,6 +49,8 @@ public class Jtdl {
     private int     maxWorstBoxes           = 100;
     private float   minOverlapCutoff        = 0.6f;
     private float   maxOverlapCutoff        = 0.2f;
+    private int     initialNegativeSamples  = 100;
+    private int     updateNegativeSamples   = 100;
 
     //After reading in the image (in color) we convert it to Gray scale
     private      IplImage   grayScaleImage = null;
@@ -108,9 +110,8 @@ public class Jtdl {
         Collections.shuffle( worstOverlaps ); //for random test/train split
         List<ScaledBoundingBox> variedWorstOverlaps = getVariantOverlaps(grayScaleImage, worstOverlaps);
 
-        //TODO: BUG BUG online has them all.. but here we dont.. not sure why
-        worstOverlaps       = worstOverlaps.subList(0,Math.min(100,worstOverlaps.size()));
-        variedWorstOverlaps = variedWorstOverlaps.subList(0,Math.min(100,variedWorstOverlaps.size()));
+        worstOverlaps       = worstOverlaps.subList(0,Math.min(initialNegativeSamples,worstOverlaps.size()));
+        variedWorstOverlaps = variedWorstOverlaps.subList(0,Math.min(initialNegativeSamples,variedWorstOverlaps.size()));
 
 
         List<ScaledBoundingBox> trainWorstOverlaps       = worstOverlaps.subList(0, worstOverlaps.size()/2 );
@@ -164,18 +165,19 @@ public class Jtdl {
         Collections.shuffle( worstOverlaps );
         List<ScaledBoundingBox> variedWorstOverlaps = getVariantOverlaps(grayScaleImage, worstOverlaps);
 
-        //TODO: BUG BUG online has them all.. but here we dont.. not sure why
-        worstOverlaps = worstOverlaps.subList(0,Math.min(100,worstOverlaps.size()));
-        variedWorstOverlaps = variedWorstOverlaps.subList(0,Math.min(100,variedWorstOverlaps.size()));
+        worstOverlaps       = worstOverlaps.subList(0,Math.min(updateNegativeSamples,
+                                                               worstOverlaps.size()));
+        variedWorstOverlaps = variedWorstOverlaps.subList(0,Math.min(updateNegativeSamples,
+                                                                     variedWorstOverlaps.size()));
 
         ScaledBoundingBox bestBox = bestOverlaps.get(0);
-        System.out.println("BestNN:" + nearestNeighbor.getFooDebug(grayScaleImage, bestBox).relativeSimilarity);
-        System.out.println("BestFern:" + fern.measureVotesDebug(grayScaleImage, bestBox) );
-
+//        System.out.println("BestNN:" + nearestNeighbor.getFooDebug(grayScaleImage, bestBox).relativeSimilarity);
+//        System.out.println("BestFern:" + fern.measureVotesDebug(grayScaleImage, bestBox) );
+//
         nearestNeighbor.train(grayScaleImage, (List) bestOverlaps, (List) worstOverlaps);
         fern.train(grayScaleImage, updatedBoundingBox, bestOverlaps, variedWorstOverlaps);
-        System.out.println("PostBestNN:" + nearestNeighbor.getFooDebug(grayScaleImage, bestBox).relativeSimilarity);
-        System.out.println("PostBestFern:" + fern.measureVotesDebug( grayScaleImage, bestBox ) );
+//        System.out.println("PostBestNN:" + nearestNeighbor.getFooDebug(grayScaleImage, bestBox).relativeSimilarity);
+//        System.out.println("PostBestFern:" + fern.measureVotesDebug( grayScaleImage, bestBox ) );
     }
 
     public void detect(IplImage image ) {
@@ -188,11 +190,11 @@ public class Jtdl {
         for( ScanningBoundingBoxes boxes : scanningBoundingBoxesList ) {
             for( ScaledBoundingBox scaledBox : boxes.boundingBoxes ) {
 
-                //double testVariance = Utils.getVariance( scaledBox, iisum, iisqsum );
-                //if( testVariance >= variance ) {
+                double testVariance = Utils.getVariance( scaledBox, iisum, iisqsum );
+                if( testVariance >= variance ) {
 
                     float value = fern.measureVotes(grayScaleImage, scaledBox );
-                    if( value > 0.0 ) {
+                    if( value > fern.getNumFerns()*(fern.getMinThreshold()) ) {
                         NearestNeighbor.Foo foo = nearestNeighbor.getFooDebug( grayScaleImage, scaledBox );
                         if( foo.relativeSimilarity > bestNN ) {
                             bestNN = foo.relativeSimilarity;
@@ -201,7 +203,7 @@ public class Jtdl {
                             cvSaveImage("/tmp/found-"+ scaledBox + "-v-" + value + "-" +foo.relativeSimilarity+"-var:"+testVar+ ".png", Utils.getImagePatch( grayScaleImage, scaledBox ) );
                         }
                     }
-                //}
+                }
             }
         }
     }

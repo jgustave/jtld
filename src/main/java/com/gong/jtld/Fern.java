@@ -32,9 +32,10 @@ public class Fern {
     private float minThreshold = 0.6f;
     private float negativeThreshold;
     private float positiveThreshold;
+
     private final int numFerns;
     private final int featuresPerFern;
-    private final int numWarpsInit   = 20;
+    private final int numWarpsInit   = 100;
     private final int numWarpsUpdate = 20;
 
 
@@ -78,6 +79,10 @@ public class Fern {
                                                          theta*Math.PI/180.0,
                                                          -phi*Math.PI/180.0, //phi
                                                          phi*Math.PI/180.0);
+    }
+
+    public float getMinThreshold () {
+        return minThreshold;
     }
 
     public void init(IplImage initialImage,
@@ -151,19 +156,19 @@ public class Fern {
         isFirst = false;
 
 //This morph doesn't work as well...
-//        patch = smoothImage.clone();
-//        for( int x=0;x<numWarps;x++) {
-//            cvResetImageROI( patch );
-//            cvSetImageROI( patch, hullBox.getRect() );
-//            generator.generate( smoothImage,
-//                                hullBox.getCenter(),
-//                                patch,
-//                                hullBox.getSize(),
-//                                rng );
-//            cvResetImageROI( patch );
-//            cvSetImageROI( patch, bestBoxes.get(0).getRect() );
-//            positiveFeatures.add( getFeatures( patch, bestBoxes.get(0).scaleIndex ) );
-//        }
+        patch = smoothImage.clone();
+        for( int x=0;x<numWarps;x++) {
+            cvResetImageROI( patch );
+            cvSetImageROI( patch, hullBox.getRect() );
+            generator.generate( smoothImage,
+                                hullBox.getCenter(),
+                                patch,
+                                hullBox.getSize(),
+                                rng );
+            cvResetImageROI( patch );
+            cvSetImageROI( patch, bestBoxes.get(0).getRect() );
+            positiveFeatures.add( getFeatures( patch, bestBoxes.get(0).scaleIndex ) );
+        }
 
 
         patch = Utils.getImagePatch(smoothImage, bestBoxes.get(0) );
@@ -261,13 +266,20 @@ public class Fern {
             }
 
             if( positiveCounter[x][index] == 0 ){
-                posteriors[x][index]=0; //anti div by zero
+                posteriors[x][index] = 0; //anti div by zero
             }else{
-                posteriors[x][index]= ((float)positiveCounter[x][index])/((float)(positiveCounter[x][index] + (float)negativeCounter[x][index]));
+                posteriors[x][index] = ((float)positiveCounter[x][index]) /
+                                          ((float)(positiveCounter[x][index] + negativeCounter[x][index]));
             }
         }
     }
 
+    /**
+     * Given the Test Data, find the most confident Negative Image.
+     * We will use this as a threshold to determine if we update the classifier.
+     * @param image
+     * @param negativeBoxes
+     */
     public void updateMinThreshold(IplImage image, List<ScaledBoundingBox> negativeBoxes ) {
         //TODO: optimze ..reuse int[] memory
         float threshold = 0.0f;
@@ -296,13 +308,15 @@ public class Fern {
         for( int[] sample : foo ) {
             float vote = measureVotes( sample );
             if( positivo.contains( sample ) ) {
-                //if( vote <= positiveThreshold ) {
+                //If a Positive Sample and voted < positiveThreshold then update.
+                if( vote <= positiveThreshold ) {
                     updatePosterior( true, sample );
-                //}
+                }
             }else {
-                //if( vote >= negativeThreshold ) {
+                //If a negative Sample, and it voted greater than negativeThreshold.. then update.
+                if( vote >= negativeThreshold ) {
                     updatePosterior( false, sample );
-                //}
+                }
             }
         }
     }

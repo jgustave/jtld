@@ -82,59 +82,6 @@ public class Utils {
         return(result);
     }
 
-//    public static void main(String[] args) {
-//
-//        float[] vals = {1f,2f,3f,4f,5f,6f,7f};
-//        System.out.println("" + medianIgnoreNan(vals));
-//
-//        float[] vals2 = {1f,2f,4f,5f,6f,7f};
-//        System.out.println("" + medianIgnoreNan(vals2) );
-//
-//        float[] vals3 = {1f,2f,Float.NaN,4f,5f,6f,7f};
-//        System.out.println("" + medianIgnoreNan(vals3) );
-//    }
-//
-//    public static void main( String[] args ) {
-//        CvMat mat1 = CvMat.create(3,2);
-//        CvMat mat2 = CvMat.create(3,2);
-//        CvMat mat3 = CvMat.create(3,2);
-//        CvMat mat4 = CvMat.create(3,2);
-//
-//
-//        mat1.put(0,0,5d);
-//        mat1.put(0,1,2);
-//        mat1.put(1,0,5);
-//        mat1.put(1,1,7);
-//        mat1.put(2,0,9);
-//        mat1.put(2,1,10);
-//
-//        mat2.put(0,0,15);
-//        mat2.put(0,1,16);
-//        mat2.put(1,0,17);
-//        mat2.put(1,1,18);
-//        mat2.put(2,0,19);
-//        mat2.put(2,1,15);
-//
-//
-//        //euclidean distance
-//        //Sqrt(deltaX^2 + deltaY)
-//
-//        System.out.println("Hello:" + mat1 );
-//        System.out.println("Hello:" + mat2 );
-//        System.out.println("Byte: " + pairwiseDistance(mat1));
-//        System.out.println("hellodfdf:" + Arrays.toString(mat1.get()) );
-//        //cvSub(mat2, mat1, mat3, null); //  mat1 - mat2
-//        //cvDiv(mat1,mat2,mat3,1); //  mat1./mat2
-//        //System.out.println("Hello:" + mat3 );
-//
-////        int numRows = 4;
-////        for( int x=0;x<numRows;x++) {
-////            for( int y=x+1;y<numRows;y++) {
-////                System.out.println("X:" + x + " Y:" + y);
-////            }
-////        }
-//
-//    }
 
     /**
      * Calculate the pairwise distance for the given matrix using euclidean distance

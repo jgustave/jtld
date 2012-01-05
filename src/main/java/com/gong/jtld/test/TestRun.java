@@ -108,6 +108,7 @@ public class TestRun {
         }
 
         jtdl.fern.dump();
+        jtdl.nearestNeighbor.dump();
         System.out.println("Searching...");
         IplImage searchImage = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00001.png", CV_LOAD_IMAGE_GRAYSCALE );
         jtdl.detect( searchImage );
