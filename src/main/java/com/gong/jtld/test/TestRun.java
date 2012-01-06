@@ -35,8 +35,6 @@ public class TestRun {
 
         int outputImageNo = 2;
         for( int x=6;x<=100;x++){
-
-
             NearestNeighbor.Foo foo = null;
             String temp     = "00000" + x;
             String inStr  = temp.substring(temp.length()-5,temp.length());
@@ -46,36 +44,27 @@ public class TestRun {
             nextGray = cvLoadImage("/Users/jerdavis/devhome/jtld/images/"+inStr+".png", CV_LOAD_IMAGE_GRAYSCALE);
             next     = cvLoadImage("/Users/jerdavis/devhome/jtld/images/"+inStr+".png", CV_LOAD_IMAGE_UNCHANGED);
 
-
             result      = jtdl.tracker.track(currentGray, nextGray, boundingBox );
             int[] validIndexes = Tracker.getValidIndexes(result);
 
             if( validIndexes.length > 0 ) {
-
-                //This is where
                 updatedBoundingBox = Tracker.predictBoundingBox( boundingBox, result, validIndexes);
 
-//
-//
-//                foo = nearestNeighbor.getFooDebug( nextGray, updatedBoundingBox );
-//
-//                cvPutText( next,
-//                           "" + foo.relativeSimilarity ,
-//                           cvPoint(30,60),
-//                           font,
-//                           CV_RGB(10, 10, 10) );
-//
-//
-//                if( !boundingBox.isOutsideImage(nextGray) ) {
-//                    jtdl.learn( nextGray, updatedBoundingBox );
-//                }
+                foo = nearestNeighbor.getFooDebug( nextGray, updatedBoundingBox );
+                //TODO: jtdl.fern.measureVotes( nextGray, bestBox )
+                   cvPutText( next,
+                           "" + foo.relativeSimilarity ,
+                           cvPoint(30,60),
+                           font,
+                           CV_RGB(10, 10, 10) );
+
+
+                if( !boundingBox.isOutsideImage(nextGray) ) {
+                    jtdl.learn( nextGray, updatedBoundingBox );
+                }
 
             }else {
-
                 System.out.println("Uh oh, no valid Indexes:" + inStr);
-                //Try to detect the object
-                //jtdl.detect();
-
                 //need to wait till detector finds object again
                 //null BB.
             }
