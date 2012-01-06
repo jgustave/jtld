@@ -89,6 +89,7 @@ public class TestFern {
 
         for( int x=0;x<boxes.size();x++) {
             for( int y=x+1;y<boxes.size();y++) {
+            //for( int y=0;y<boxes.size();y++) {
                 System.out.print(".");
                 float overlap = boxes.get(x).overlap(boxes.get(y));
                 if( overlap > 0.5f ) {
