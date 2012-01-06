@@ -1,6 +1,5 @@
 package com.gong.jtld;
 
-import com.googlecode.javacpp.BytePointer;
 import com.googlecode.javacv.cpp.opencv_core;
 import com.googlecode.javacv.cpp.opencv_features2d.PatchGenerator;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;

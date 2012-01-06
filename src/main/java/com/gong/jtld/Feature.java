@@ -3,6 +3,10 @@ package com.gong.jtld;
 import com.googlecode.javacpp.BytePointer;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
+/**
+ * This is a Fern Feature.
+ * If the intensity of one pixel is > than the other... then the feature is present.
+ */
 public class Feature {
     public final int x1;
     public final int y1;
@@ -26,16 +30,18 @@ public class Feature {
      */
     public int eval (IplImage image) {
 
-        if( x1 > image.width() || x2 > image.width() || y1 > image.height() || y2 > image.height() ) {
+        if( x1 >= image.width() || x2 >= image.width() || y1 >= image.height() || y2 >= image.height() ) {
             throw new RuntimeException("Feature is off image");
         }
         int         widthStep = image.widthStep();
         BytePointer imageData = image.imageData();
+        //Image should be unsigned 8 bit gray scale
         int val1 = (imageData.get(widthStep*y1+x1)&0x000000FF);
         int val2 = (imageData.get(widthStep*y2+x2)&0x000000FF);
 
         return( (val1 > val2)?1:0 );
     }
+
     public String toString() {
         return("Feature [" +x1 + "," + y1 + "] [" + x2 + "," + y2 + "]" );
     }

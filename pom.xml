@@ -48,7 +48,20 @@
           <scope>system</scope>
           <systemPath>${project.basedir}/libs/javacv-macosx-x86_64.jar</systemPath>
       </dependency>
-
+      <dependency>
+          <groupId>jgrapht</groupId>
+          <artifactId>jgrapht</artifactId>
+          <version>0.0.1</version>
+          <scope>system</scope>
+          <systemPath>${project.basedir}/libs/jgrapht-jdk1.6.jar</systemPath>
+      </dependency>
+      <dependency>
+          <groupId>jpaul</groupId>
+          <artifactId>jpaul</artifactId>
+          <version>0.0.1</version>
+          <scope>system</scope>
+          <systemPath>${project.basedir}/libs/jpaul-2.5.1.jar</systemPath>
+      </dependency>
   </dependencies>
 
   <build>

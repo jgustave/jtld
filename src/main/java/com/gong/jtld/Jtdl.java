@@ -4,7 +4,9 @@ import com.googlecode.javacv.cpp.opencv_core;
 import com.googlecode.javacv.cpp.opencv_core.CvMat;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
+
 import static com.googlecode.javacv.cpp.opencv_core.*;
+
 import static com.googlecode.javacv.cpp.opencv_highgui.cvConvertImage;
 import static com.googlecode.javacv.cpp.opencv_highgui.cvSaveImage;
 import static com.googlecode.javacv.cpp.opencv_imgproc.CV_GAUSSIAN;
@@ -206,6 +208,7 @@ public class Jtdl {
                 }
             }
         }
+
     }
 
 }
