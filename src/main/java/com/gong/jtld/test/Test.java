@@ -28,9 +28,9 @@ public class Test {
         Jtdl jtdl = new Jtdl();
         jtdl.init( img1, boundingBox1 );
 
-        BoundingBox boundingBox1a =Utils.getBestOverlappingScanBoxes( boundingBox1, jtdl.scanningBoundingBoxesList, 1, 0.6f ).get(0);
-        BoundingBox boundingBox2a =Utils.getBestOverlappingScanBoxes( boundingBox2, jtdl.scanningBoundingBoxesList, 1, 0.6f ).get(0);
-        BoundingBox boundingBox3a =Utils.getBestOverlappingScanBoxes( boundingBox3, jtdl.scanningBoundingBoxesList, 1, 0.6f ).get(0);
+        BoundingBox boundingBox1a =Utils.getBestOverlappingScanBoxes( boundingBox1, jtdl.scanningBoxes, 1, 0.6f ).get(0);
+        BoundingBox boundingBox2a =Utils.getBestOverlappingScanBoxes( boundingBox2, jtdl.scanningBoxes, 1, 0.6f ).get(0);
+        BoundingBox boundingBox3a =Utils.getBestOverlappingScanBoxes( boundingBox3, jtdl.scanningBoxes, 1, 0.6f ).get(0);
 
         System.out.println("Fern:" + jtdl.fern.measureVotesDebug( img1, (ScaledBoundingBox)boundingBox1a ) );
         System.out.println("Fern:" + jtdl.fern.measureVotesDebug( img2, (ScaledBoundingBox)boundingBox2a ) );

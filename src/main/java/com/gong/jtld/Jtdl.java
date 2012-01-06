@@ -39,8 +39,11 @@ public class Jtdl {
     //Semi Nieve Bayesian Image Detector based on Ferns
     public final Fern                           fern;
 
+    private      BoundingBox                    currentBoundingBox = null;
+
     //Template Bounding boxes used when scanning the image for matches.
-    public       List<ScanningBoundingBoxes>    scanningBoundingBoxesList;
+    //public       List<ScanningBoundingBoxes>    scanningBoundingBoxesList;
+    public       ScaledBoundingBox[]            scanningBoxes               = null;
 
     //Various Parameters
     private int     numFerns                = 20;
@@ -78,6 +81,7 @@ public class Jtdl {
      */
     public void init(IplImage initialImage, BoundingBox initialBoundingBox ) {
 
+        this.currentBoundingBox = initialBoundingBox;
         if( grayScaleImage != null ) {
             //Not sure how/if GC is going to double release.. this may not be necessary
             grayScaleImage.release();
@@ -95,19 +99,24 @@ public class Jtdl {
 
         variance = stdDev.getVal(0) * stdDev.getVal(0) * 0.5;
 
-        scanningBoundingBoxesList = BoundingBox.createTestBoxes( initialBoundingBox,
-                                                                 SCALES,
-                                                                 initialImage.width(),
-                                                                 initialImage.height(),
-                                                                 minWindowSize );
+//        scanningBoundingBoxesList = BoundingBox.createTestBoxes( initialBoundingBox,
+//                                                                 SCALES,
+//                                                                 initialImage.width(),
+//                                                                 initialImage.height(),
+//                                                                 minWindowSize );
+        scanningBoxes = BoundingBox.createTestBoxeArray( initialBoundingBox,
+                                                         SCALES,
+                                                         initialImage.width(),
+                                                         initialImage.height(),
+                                                         minWindowSize );
 
 
         List<ScaledBoundingBox> bestOverlaps  = (List)Utils.getBestOverlappingScanBoxes( initialBoundingBox,
-                                                                             scanningBoundingBoxesList,
+                                                                             scanningBoxes,
                                                                              maxBestBoxes,
                                                                              minOverlapCutoff );
         List<ScaledBoundingBox> worstOverlaps = (List)Utils.getWorstOverlappingScanBoxes( initialBoundingBox,
-                                                                              scanningBoundingBoxesList,
+                                                                              scanningBoxes,
                                                                               maxOverlapCutoff );
         Collections.shuffle( worstOverlaps ); //for random test/train split
         List<ScaledBoundingBox> variedWorstOverlaps = getVariantOverlaps(grayScaleImage, worstOverlaps);
@@ -134,6 +143,11 @@ public class Jtdl {
         fern.updateMinThreshold( grayScaleImage, testVariedWorstOverlaps );
     }
 
+    public BoundingBox getCurrentBoundingBox () {
+        return currentBoundingBox;
+    }
+//public void
+
     /**
      * We only want worst overlaps if they are highly variant.. meaning they have information in them.
      * @param image
@@ -158,11 +172,11 @@ public class Jtdl {
 
 
         List<ScaledBoundingBox> bestOverlaps  = (List)Utils.getBestOverlappingScanBoxes( updatedBoundingBox,
-                                                                             scanningBoundingBoxesList,
+                                                                             scanningBoxes,
                                                                              maxBestBoxes,
                                                                              minOverlapCutoff );
         List<ScaledBoundingBox> worstOverlaps = (List)Utils.getWorstOverlappingScanBoxes( updatedBoundingBox,
-                                                                              scanningBoundingBoxesList,
+                                                                              scanningBoxes,
                                                                               maxOverlapCutoff );
         Collections.shuffle( worstOverlaps );
         List<ScaledBoundingBox> variedWorstOverlaps = getVariantOverlaps(grayScaleImage, worstOverlaps);
@@ -182,33 +196,40 @@ public class Jtdl {
 //        System.out.println("PostBestFern:" + fern.measureVotesDebug( grayScaleImage, bestBox ) );
     }
 
-    public void detect(IplImage image ) {
-
+    public DetectorResult detect(IplImage image ) {
+        DetectorResult result = null;
 
         cvConvertImage( image, grayScaleImage, 0 );
         cvIntegral(grayScaleImage, iisum, iisqsum, null );
         cvSmooth( grayScaleImage, grayScaleImage, CV_GAUSSIAN, 9,9, 1.5, 1.5 );
         double bestNN = 0.0;
-        for( ScanningBoundingBoxes boxes : scanningBoundingBoxesList ) {
-            for( ScaledBoundingBox scaledBox : boxes.boundingBoxes ) {
+        for( ScaledBoundingBox scaledBox : this.scanningBoxes ) {
 
-                double testVariance = Utils.getVariance( scaledBox, iisum, iisqsum );
-                if( testVariance >= variance ) {
+            //First exclude areas that don't have high enough variance.
+            double testVariance = Utils.getVariance( scaledBox, iisum, iisqsum );
+            if( testVariance >= variance ) {
 
-                    float value = fern.measureVotes(grayScaleImage, scaledBox );
-                    if( value > fern.getNumFerns()*(fern.getMinThreshold()) ) {
-                        NearestNeighbor.Foo foo = nearestNeighbor.getFooDebug( grayScaleImage, scaledBox );
-                        if( foo.relativeSimilarity > bestNN ) {
-                            bestNN = foo.relativeSimilarity;
-                            double testVar = Utils.getVariance( scaledBox, iisum, iisqsum );
-                            System.out.println("Fern:" + value + " NN:" + foo.relativeSimilarity + " var:" + testVar  );
-                            cvSaveImage("/tmp/found-"+ scaledBox + "-v-" + value + "-" +foo.relativeSimilarity+"-var:"+testVar+ ".png", Utils.getImagePatch( grayScaleImage, scaledBox ) );
-                        }
+                //Then exclude if fern isn't good enough
+                float value = fern.measureVotes(grayScaleImage, scaledBox );
+                if( value > fern.getNumFerns()*(fern.getMinThreshold()) ) {
+
+
+
+                    NearestNeighbor.Foo foo = nearestNeighbor.getFooDebug( grayScaleImage, scaledBox );
+                    if( foo.relativeSimilarity > bestNN ) {
+
+
+
+                        bestNN = foo.relativeSimilarity;
+                        double testVar = Utils.getVariance( scaledBox, iisum, iisqsum );
+                        System.out.println("Fern:" + value + " NN:" + foo.relativeSimilarity + " var:" + testVar  );
+                        cvSaveImage("/tmp/found-"+ scaledBox + "-v-" + value + "-" +foo.relativeSimilarity+"-var:"+testVar+ ".png", Utils.getImagePatch( grayScaleImage, scaledBox ) );
                     }
                 }
             }
         }
 
+        return( result );
     }
 
 }

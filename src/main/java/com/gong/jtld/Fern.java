@@ -18,13 +18,13 @@ import java.util.*;
  *
  */
 public class Fern {
+    static{new opencv_features2d.LDetector();} //work around for bug
+
     private static final Random rand = new Random();
     //scaledWindows
 
     private final PatchGenerator generator;
     private final opencv_core.CvRNG rng = new opencv_core.CvRNG();
-
-
 
     //private final List<int[]> positiveFeatures = new ArrayList<int[]>();
     //private final List<int[]> negativeFeatures = new ArrayList<int[]>();
@@ -66,8 +66,6 @@ public class Fern {
         double theta   = 20.0;
         double phi     = 20.0;
 
-
-        opencv_features2d.LDetector unusedBugWorkAround = new opencv_features2d.LDetector();
         generator = new opencv_features2d.PatchGenerator(0.0, //background min
                                                          0.0, //background max
                                                          5.0,  //noise range
@@ -105,10 +103,10 @@ public class Fern {
 
             //Features at different scales
             for( int y=0;y<SCALES.length;y++) {
-                Feature feature = new Feature( (int)(width*SCALES[y] * rand1),
-                                               (int)(height*SCALES[y] * rand2),
-                                               (int)(width*SCALES[y] * rand3),
-                                               (int)(height*SCALES[y] * rand4)  );
+                Feature feature = new Feature( (int)((width-1)*SCALES[y] * rand1),
+                                               (int)((height-1)*SCALES[y] * rand2),
+                                               (int)((width-1)*SCALES[y] * rand3),
+                                               (int)((height-1)*SCALES[y] * rand4)  );
                 features[y][x] = feature;
             }
         }

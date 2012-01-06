@@ -6,7 +6,10 @@ import com.googlecode.javacv.cpp.opencv_core.CvPoint2D32f;
  *
  */
 public class TrackerResult {
+
+    //These are the original Points that we are going to track flow from.
     public final CvPoint2D32f   origPoints;
+    //These are the Points we found the flow to.
     public final CvPoint2D32f   foundPoints;
     public final float[]        forwardBackwardError;
     public final float[]        normCrossCorrelation;

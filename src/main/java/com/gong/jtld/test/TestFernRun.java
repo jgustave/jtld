@@ -31,7 +31,7 @@ public class TestFernRun {
 
 
         jtdl.init( current, boundingBox );
-        ScaledBoundingBox bestBox = (ScaledBoundingBox)Utils.getBestOverlappingScanBoxes(boundingBox, jtdl.scanningBoundingBoxesList, 1, 0.6f ).get(0);
+        ScaledBoundingBox bestBox = (ScaledBoundingBox)Utils.getBestOverlappingScanBoxes(boundingBox, jtdl.scanningBoxes, 1, 0.6f ).get(0);
         jtdl.learn( current, bestBox );
         jtdl.learn( current, bestBox );
         System.out.println("Votes:" + jtdl.fern.measureVotesDebug( currentGray, bestBox ) );

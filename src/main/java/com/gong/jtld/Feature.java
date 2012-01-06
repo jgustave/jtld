@@ -31,7 +31,7 @@ public class Feature {
     public int eval (IplImage image) {
 
         if( x1 >= image.width() || x2 >= image.width() || y1 >= image.height() || y2 >= image.height() ) {
-            throw new RuntimeException("Feature is off image");
+            throw new RuntimeException("Feature is off image " +  this + " w:" + image.width() + " h:" + image.height() );
         }
         int         widthStep = image.widthStep();
         BytePointer imageData = image.imageData();

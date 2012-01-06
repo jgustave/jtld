@@ -170,6 +170,11 @@ public class Tracker {
         return( result );
     }
 
+    /**
+     * Only these indexes in the results are to be considered
+     * @param result
+     * @return
+     */
     public static int[] getValidIndexes(TrackerResult result ) {
         float   medianForwardBackwardError = (float)Utils.medianIgnoreNan( result.forwardBackwardError );
         float   medianNormCrossCorrelation = (float)Utils.medianIgnoreNan( result.normCrossCorrelation );
@@ -188,8 +193,9 @@ public class Tracker {
                 numValidIndexes++;
             }
         }
+
         int[]   validIndexes   = new int[numValidIndexes];
-        System.arraycopy(tempIndexes,0,validIndexes,0,numValidIndexes);
+        System.arraycopy( tempIndexes, 0, validIndexes, 0, numValidIndexes );
 
         return( validIndexes );
     }
@@ -207,8 +213,8 @@ public class Tracker {
      * @return
      */
     public static BoundingBox predictBoundingBox ( BoundingBox origBoundingBox,
-                                                    TrackerResult trackerResult,
-                                                    int[] validIndexes ) {
+                                                   TrackerResult trackerResult,
+                                                   int[] validIndexes ) {
 
         //int numPoints       = trackerResult.getNumPoints();
         int numValidPoints  = validIndexes.length;
@@ -224,9 +230,6 @@ public class Tracker {
             foundPoints.put(i,1,trackerResult.foundPoints.y());
         }
 
-
-//        CvMat origPoints  = Utils.toMatrix( result.origPoints, result.getNumPoints() );
-//        CvMat foundPoints = Utils.toMatrix( result.foundPoints, result.getNumPoints() );
         CvMat deltaPoints = CvMat.create(numValidPoints, 2 );
         cvSub( foundPoints, origPoints, deltaPoints, null );
 

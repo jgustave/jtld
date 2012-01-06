@@ -14,6 +14,7 @@ import static com.googlecode.javacv.cpp.opencv_highgui.*;
 public class TestInit {
 
 
+    @SuppressWarnings ({"unchecked"})
     public static void main( String[] args ){
         System.out.println("Helloo!");
         System.out.println("Path:" + System.getProperty("java.library.path") );
@@ -22,7 +23,7 @@ public class TestInit {
         Tracker                     tracker             = new Tracker();
         BoundingBox                 boundingBox         = new BoundingBox(300,30,335,105);
         BoundingBox                 updatedBoundingBox  = new BoundingBox(300,30,335,105);
-        List<ScanningBoundingBoxes> testBoundingBoxes   = null;
+        ScaledBoundingBox[]         testBoundingBoxes   = null;
         TrackerResult               result              = null;
         int                         patchSize           = 25;
         CvFont                      font                = new CvFont(CV_FONT_HERSHEY_PLAIN, 1.0, 1);
@@ -33,11 +34,8 @@ public class TestInit {
         IplImage next        = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00005.png", CV_LOAD_IMAGE_UNCHANGED);
 
         //Get all possible BB's used in scanning the image for matches.
-        testBoundingBoxes = BoundingBox.createTestBoxes( boundingBox,
-                                                         Jtdl.SCALES,
-                                                         currentGray.width(),
-                                                         currentGray.height(),
-                                                         24 );
+        testBoundingBoxes = BoundingBox.createTestBoxeArray(
+                boundingBox, Jtdl.SCALES, currentGray.width(), currentGray.height(), 24);
         nearestNeighbor   = new NearestNeighbor( patchSize );
 
 
@@ -47,16 +45,16 @@ public class TestInit {
         //These are used by Nearest Neighbor
 
 
-        List<BoundingBox> bestOverlaps  = Utils.getBestOverlappingScanBoxes( boundingBox,
+        List<ScaledBoundingBox> bestOverlaps  = Utils.getBestOverlappingScanBoxes( boundingBox,
                                                                              testBoundingBoxes,
                                                                              10,
                                                                              0.6f );
-        List<BoundingBox> worstOverlaps = Utils.getWorstOverlappingScanBoxes( boundingBox,
+        List<ScaledBoundingBox> worstOverlaps = Utils.getWorstOverlappingScanBoxes( boundingBox,
                                                                               testBoundingBoxes,
                                                                               0.2f );
 
 
-        nearestNeighbor.init( currentGray, bestOverlaps, worstOverlaps );
+        nearestNeighbor.init( currentGray, (List)bestOverlaps, (List)worstOverlaps );
 
 
 
@@ -87,13 +85,13 @@ public class TestInit {
             if( validIndexes.length > 0 ) {
                 updatedBoundingBox = Tracker.predictBoundingBox(boundingBox, result, validIndexes);
 
-                foo = nearestNeighbor.getFooDebug( nextGray, updatedBoundingBox );
+                foo = nearestNeighbor.getFooDebug(nextGray, updatedBoundingBox);
                 BoundingBox fakeBox = new BoundingBox(10,
                                                       updatedBoundingBox.y1,
                                                       10+updatedBoundingBox.getWidth(),
                                                       updatedBoundingBox.y2 );
                 if( !fakeBox.isOutsideImage( nextGray ) ) {
-                    NearestNeighbor.Foo fakeFoo = nearestNeighbor.getFooDebug( nextGray, fakeBox );
+                    NearestNeighbor.Foo fakeFoo = nearestNeighbor.getFooDebug(nextGray, fakeBox);
                     cvPutText( next,
                                "" + fakeFoo.relativeSimilarity,
                                cvPoint(30,90),
@@ -117,7 +115,7 @@ public class TestInit {
                                                                         testBoundingBoxes,
                                                                         0.2f );
 
-                    nearestNeighbor.init( nextGray, bestOverlaps, worstOverlaps );
+                    nearestNeighbor.init( nextGray, (List)bestOverlaps, (List)worstOverlaps );
                     System.out.println("Status:" + nearestNeighbor.getStatus() );
                 }
 

@@ -180,12 +180,6 @@ public class BoundingBox {
         double   shift  = 0.1;
         //We will scale the initial bounding box in various interesting ways.
 
-//        //1.2^(-10 to 10)
-//        double[] scales = { 0.16151,0.19381,0.23257,0.27908,0.33490,
-//                            0.40188,0.48225,0.57870,0.69444,0.83333,
-//                            1.00000,1.20000,1.44000,1.72800,2.07360,
-//                            2.48832,2.98598,3.58318,4.29982,5.15978,6.19174 };
-
         int[] possibleWidths            = new int[scales.length];
         int[] possibleHeights           = new int[scales.length];
         double[] shiftedHW              = new double[scales.length];
@@ -250,7 +244,26 @@ public class BoundingBox {
             }
         }
         return( result );
-
+    }
+    public static ScaledBoundingBox[] createTestBoxeArray(BoundingBox origBox,
+                                                          double[] scales,
+                                                          int imageWidth,
+                                                          int imageHeight,
+                                                          int minWindowSize) {
+        List<ScanningBoundingBoxes> boxes = createTestBoxes( origBox, scales, imageWidth, imageHeight, minWindowSize );
+        int count = 0;
+        for( ScanningBoundingBoxes scanBox : boxes ) {
+            count+= scanBox.boundingBoxes.size();
+        }
+        ScaledBoundingBox[] result = new ScaledBoundingBox[count];
+        count=0;
+        for( ScanningBoundingBoxes scanBox : boxes ) {
+            for( ScaledBoundingBox box : scanBox.boundingBoxes ) {
+                result[count]=box;
+                count++;
+            }
+        }
+        return( result );
     }
     public static void main(String[] args ) {
         BoundingBox bb = new BoundingBox(1,1,30,30);

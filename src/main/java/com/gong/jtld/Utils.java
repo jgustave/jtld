@@ -18,8 +18,8 @@ public class Utils {
     public static final int X_FLIP  = 1;
     public static final int Y_FLIP  = 2;
 
-    private static final float DEGREE_TO_RADIAN = (2f*(float)Math.PI)/360f;
-    private static final Random rand = new Random();
+//    private static final float DEGREE_TO_RADIAN = (2f*(float)Math.PI)/360f;
+//    private static final Random rand = new Random();
 
     /**
      * Median, but ignore NAN's
@@ -582,30 +582,27 @@ public class Utils {
      * @param testBoundingBoxes
      * @return
      */
-    public static List<BoundingBox> getBestOverlappingScanBoxes( BoundingBox boundingBox,
-                                                                 List<ScanningBoundingBoxes> testBoundingBoxes,
-                                                                 int maxResults,
-                                                                 float minCutoff ) {
+    public static List<ScaledBoundingBox> getBestOverlappingScanBoxes( BoundingBox boundingBox,
+                                                                       ScaledBoundingBox[] testBoundingBoxes,
+                                                                       int maxResults,
+                                                                       float minCutoff ) {
+        //TODO: treemap inefficient ... create static Object(Float,BB) and Arrays.sort
+        TreeMap<Float,List<ScaledBoundingBox>> closestMap = new TreeMap<Float, List<ScaledBoundingBox>>();
 
-        TreeMap<Float,List<BoundingBox>> closestMap = new TreeMap<Float, List<BoundingBox>>();
-
-        //Look at every Scan.BB
-        for(ScanningBoundingBoxes boxes : testBoundingBoxes ) {
-            for( BoundingBox box : boxes.boundingBoxes ) {
-                float overlap = boundingBox.overlap(box);
-                if( overlap > minCutoff ) {
-                    List<BoundingBox> boxList = closestMap.get(overlap);
-                    if( boxList == null ) {
-                        boxList = new ArrayList<BoundingBox>();
-                        closestMap.put( overlap, boxList );
-                    }
-                    boxList.add( box );
+        for( ScaledBoundingBox box : testBoundingBoxes ) {
+            float overlap = boundingBox.overlap(box);
+            if( overlap > minCutoff ) {
+                List<ScaledBoundingBox> boxList = closestMap.get(overlap);
+                if( boxList == null ) {
+                    boxList = new ArrayList<ScaledBoundingBox>();
+                    closestMap.put( overlap, boxList );
                 }
+                boxList.add( box );
             }
         }
 
         //Now we reduce to the maxBoxes
-        List<BoundingBox> closestList = new ArrayList<BoundingBox>();
+        List<ScaledBoundingBox> closestList = new ArrayList<ScaledBoundingBox>();
         while(closestList.size() < maxResults ) {
             if( closestMap.size() == 0 ) {
                 break;
@@ -623,19 +620,18 @@ public class Utils {
      * @param maxCutoff
      * @return
      */
-    public static List<BoundingBox> getWorstOverlappingScanBoxes (BoundingBox boundingBox,
-                                                                   List<ScanningBoundingBoxes> testBoundingBoxes,
-                                                                   float maxCutoff ) {
+    public static List<ScaledBoundingBox> getWorstOverlappingScanBoxes (BoundingBox boundingBox,
+                                                                        ScaledBoundingBox[] testBoundingBoxes,
+                                                                        float maxCutoff ) {
 
-        List<BoundingBox> worstList = new ArrayList<BoundingBox>(256);
+
+        List<ScaledBoundingBox> worstList = new ArrayList<ScaledBoundingBox>(256);
 
         //Look at every Scan.BB
-        for(ScanningBoundingBoxes boxes : testBoundingBoxes ) {
-            for( BoundingBox box : boxes.boundingBoxes ) {
-                float overlap = boundingBox.overlap(box);
-                if( overlap < maxCutoff ) {
-                    worstList.add( box );
-                }
+        for( ScaledBoundingBox box : testBoundingBoxes ) {
+            float overlap = boundingBox.overlap(box);
+            if( overlap < maxCutoff ) {
+                worstList.add( box );
             }
         }
         return( worstList );

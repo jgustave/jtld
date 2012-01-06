@@ -45,10 +45,10 @@ public class TestOverlap {
         opencv_core.IplImage currentGray = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00005.png", CV_LOAD_IMAGE_GRAYSCALE);
 
         jtdl.init( current, boundingBox );
-        List vals = Utils.getBestOverlappingScanBoxes( boundingBox, jtdl.scanningBoundingBoxesList, 4, 0.6f );
-        List vals2 = Utils.getBestOverlappingScanBoxes( boundingBox, jtdl.scanningBoundingBoxesList, 4, 0.6f );
+        List vals = Utils.getBestOverlappingScanBoxes( boundingBox, jtdl.scanningBoxes, 4, 0.6f );
+        List vals2 = Utils.getBestOverlappingScanBoxes( boundingBox, jtdl.scanningBoxes, 4, 0.6f );
         assertEquals(1.0, ((BoundingBox) vals2.get(0)).overlap((BoundingBox) vals2.get(0)), 0.00001);
-        List vals3 = Utils.getBestOverlappingScanBoxes( (BoundingBox)vals2.get(0), jtdl.scanningBoundingBoxesList, 4, 0.6f );
+        List vals3 = Utils.getBestOverlappingScanBoxes( (BoundingBox)vals2.get(0), jtdl.scanningBoxes, 4, 0.6f );
         assertEquals( vals.get(0), vals2.get(0) );
         assertEquals( vals2.get(0), vals3.get(0) );
         assertEquals( vals.size(), vals3.size() );

@@ -9,7 +9,7 @@ import static com.googlecode.javacv.cpp.opencv_highgui.*;
  * DYLD_FALLBACK_LIBRARY_PATH=/opt/local/lib/
  * ffmpeg -qscale 5 -r 5 -b 9600 -i imageout-%05d.png movie.mp4
  */
-public class TestRun {
+public class TestRun2 {
 
 
     public static void main( String[] args ){
@@ -17,25 +17,24 @@ public class TestRun {
         System.out.println("Path:" + System.getProperty("java.library.path") );
 
 
-        BoundingBox                 boundingBox         = new BoundingBox(300,30,335,105);
-        BoundingBox                 updatedBoundingBox  = new BoundingBox(300,30,335,105);
+        BoundingBox                 trackerPredictedBoundingBox = null;
+        BoundingBox                 detectedBoundingBox         = null;
+        BoundingBox                 boundingBox                 = new BoundingBox(300,30,335,105);
+        BoundingBox                 updatedBoundingBox          = new BoundingBox(300,30,335,105);
 
-        TrackerResult               result              = null;
-        CvFont                      font                = new CvFont(CV_FONT_HERSHEY_PLAIN, 1.0, 1);
+        TrackerResult               trackerResult               = null;
+        DetectorResult              detectorResult              = null;
+        CvFont                      font                        = new CvFont(CV_FONT_HERSHEY_PLAIN, 1.0, 1);
 
         IplImage currentGray = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00005.png", CV_LOAD_IMAGE_GRAYSCALE);
         IplImage nextGray    = null;
         IplImage next        = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00005.png", CV_LOAD_IMAGE_UNCHANGED);
 
-
         Jtdl jtdl = new Jtdl( );
         jtdl.init( next, boundingBox );
-        NearestNeighbor nearestNeighbor = jtdl.nearestNeighbor;
-
 
         int outputImageNo = 2;
         for( int x=6;x<=100;x++){
-
 
             NearestNeighbor.Foo foo = null;
             String temp     = "00000" + x;
@@ -46,29 +45,18 @@ public class TestRun {
             nextGray = cvLoadImage("/Users/jerdavis/devhome/jtld/images/"+inStr+".png", CV_LOAD_IMAGE_GRAYSCALE);
             next     = cvLoadImage("/Users/jerdavis/devhome/jtld/images/"+inStr+".png", CV_LOAD_IMAGE_UNCHANGED);
 
+            //TODO: prealloc and pass in trackerResult
+            trackerResult      = jtdl.tracker.track(currentGray, nextGray, boundingBox );
+            int[] validIndexes = Tracker.getValidIndexes(trackerResult);
 
-            result      = jtdl.tracker.track(currentGray, nextGray, boundingBox );
-            int[] validIndexes = Tracker.getValidIndexes(result);
+            detectorResult = jtdl.detect( nextGray );
 
             if( validIndexes.length > 0 ) {
 
                 //This is where
-                updatedBoundingBox = Tracker.predictBoundingBox( boundingBox, result, validIndexes);
+                trackerPredictedBoundingBox = Tracker.predictBoundingBox( boundingBox, trackerResult, validIndexes );
 
-//
-//
-//                foo = nearestNeighbor.getFooDebug( nextGray, updatedBoundingBox );
-//
-//                cvPutText( next,
-//                           "" + foo.relativeSimilarity ,
-//                           cvPoint(30,60),
-//                           font,
-//                           CV_RGB(10, 10, 10) );
-//
-//
-//                if( !boundingBox.isOutsideImage(nextGray) ) {
-//                    jtdl.learn( nextGray, updatedBoundingBox );
-//                }
+
 
             }else {
 
@@ -97,16 +85,16 @@ public class TestRun {
 
             //Flow vectors
             for( int y=0;y<validIndexes.length;y++) {
-                result.origPoints.position(validIndexes[y]);
-                result.foundPoints.position(validIndexes[y]);
+                trackerResult.origPoints.position(validIndexes[y]);
+                trackerResult.foundPoints.position(validIndexes[y]);
                 cvCircle( next,
-                          cvPoint(Math.round(result.foundPoints.x()),
-                                  Math.round(result.foundPoints.y())),
+                          cvPoint(Math.round(trackerResult.foundPoints.x()),
+                                  Math.round(trackerResult.foundPoints.y())),
                           1,
                           CV_RGB(255, 255, 0), 1, 8, 0 );
                 cvLine(next,
-                   cvPoint(Math.round(result.origPoints.x()),Math.round(result.origPoints.y())),
-                   cvPoint(Math.round(result.foundPoints.x()),Math.round(result.foundPoints.y())),
+                   cvPoint(Math.round(trackerResult.origPoints.x()),Math.round(trackerResult.origPoints.y())),
+                   cvPoint(Math.round(trackerResult.foundPoints.x()),Math.round(trackerResult.foundPoints.y())),
                    CV_RGB(255, 0, 0), 1, 8, 0);
 
             }
