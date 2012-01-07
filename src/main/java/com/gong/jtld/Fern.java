@@ -62,9 +62,9 @@ public class Fern {
         this.negativeCounter    = new int[numFerns][(int)Math.pow(2,featuresPerFern)];
         this.posteriors         = new float[numFerns][(int)Math.pow(2,featuresPerFern)];
 
-        double scaling = 0.10;
-        double theta   = 30.0;
-        double phi     = 30.0;
+        double scaling = 0.30;  //0.02
+        double theta   = 40.0;  //20
+        double phi     = 40.0;  //20
 
         generator = new opencv_features2d.PatchGenerator(0.0, //background min
                                                          0.0, //background max
