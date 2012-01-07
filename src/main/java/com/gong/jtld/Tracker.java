@@ -36,9 +36,6 @@ public class Tracker {
     private       IplImage      pyramidA                = null;
     private       IplImage      pyramidB                = null;
 
-    private       int           lastWidth               = 0;
-    private       int           lastHeight              = 0;
-
     public Tracker() {
         this(15, 10, 10, 5);
     }
@@ -71,12 +68,13 @@ public class Tracker {
      * Track from current image to next image, inside the given bounding box on currentImage
      * @param currentImage
      * @param nextImage
-     * @param trackBox
+     * @param trackBox This is the BB in currentImage, and is tracked to nextImage
      * @return
      */
     public TrackerResult track( IplImage    currentImage,
                                 IplImage    nextImage,
                                 BoundingBox trackBox ) {
+
         if( currentImage.width() != nextImage.width()  &&  currentImage.height() != nextImage.height() ) {
             throw new RuntimeException("Image size not consistent");
         }
@@ -91,16 +89,12 @@ public class Tracker {
                                      1);
         }
 
+        //TODO: can I make this a Member of the class? or atleast reset
         //Get the Points we are going to try and track, and initialize the results to those values
-        //to help LK.
+        //to help LK... This is just a grid of points inside the BB
         CvPoint2D32f temp = trackBox.getInnerGridPoints( numTrackedRows,
                                                          numTrackedColumns,
                                                          trackMargin );
-
-//        for( int x=0;x<numTrackedPoints();x++){
-//            System.out.println("TrackedPoint:" + temp.position(x));
-//        }
-
 
         for( int x=0;x<numTrackedPoints();x++) {
             currentPoints.position(x).set(temp.position(x));
@@ -126,13 +120,10 @@ public class Tracker {
                                cvTermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.03),
                                opencv_video.CV_LKFLOW_INITIAL_GUESSES );
 
-//        for( int x=0;x<numTrackedPoints();x++){
-//            System.out.println("FROM:" + currentPoints.position(x) + " TO:" + nextPoints.position(x) );
-//        }
-
         currentPoints.position(0);
         nextPoints.position(0);
         reversePoints.position(0);
+
         //Now calculate the optical flow in reverse.
         //If we get back(or close) to the original point, we have a high confidence in that result.
         cvCalcOpticalFlowPyrLK(nextImage,
@@ -213,17 +204,16 @@ public class Tracker {
      * @return
      */
     public static BoundingBox predictBoundingBox ( BoundingBox origBoundingBox,
-                                                   TrackerResult trackerResult,
-                                                   int[] validIndexes ) {
+                                                   TrackerResult trackerResult ) {
 
         //int numPoints       = trackerResult.getNumPoints();
-        int numValidPoints  = validIndexes.length;
+        int numValidPoints  = trackerResult.validIndexes.length;
         CvMat origPoints    = CvMat.create(numValidPoints, 2);
         CvMat foundPoints   = CvMat.create(numValidPoints, 2);
 
         for( int i=0;i<numValidPoints;i++) {
-            trackerResult.origPoints.position(validIndexes[i]);
-            trackerResult.foundPoints.position(validIndexes[i]);
+            trackerResult.origPoints.position(trackerResult.validIndexes[i]);
+            trackerResult.foundPoints.position(trackerResult.validIndexes[i]);
             origPoints.put(i,0,trackerResult.origPoints.x());
             origPoints.put(i,1,trackerResult.origPoints.y());
             foundPoints.put(i,0,trackerResult.foundPoints.x());

@@ -83,7 +83,7 @@ public class TestInit {
             int[] validIndexes = Tracker.getValidIndexes(result);
 
             if( validIndexes.length > 0 ) {
-                updatedBoundingBox = Tracker.predictBoundingBox(boundingBox, result, validIndexes);
+                updatedBoundingBox = Tracker.predictBoundingBox(boundingBox, result);
 
                 foo = nearestNeighbor.getFooDebug(nextGray, updatedBoundingBox);
                 BoundingBox fakeBox = new BoundingBox(10,

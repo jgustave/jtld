@@ -15,6 +15,7 @@ public class TrackerResult {
     public final float[]        normCrossCorrelation;
     public final byte[]         featuresFound;
     public final float[]        featureErrors;
+    public final int[]          validIndexes;
 
     public TrackerResult (CvPoint2D32f origPoints,
                           CvPoint2D32f foundPoints,
@@ -40,7 +41,14 @@ public class TrackerResult {
 
         this.foundPoints.position(0);
         this.origPoints.position(0);
+
+        this.validIndexes = Tracker.getValidIndexes( this );
     }
+
+    public boolean isValid() {
+        return( this.validIndexes.length > 0 );
+    }
+
 
     public int getNumPoints() {
         return( forwardBackwardError.length );

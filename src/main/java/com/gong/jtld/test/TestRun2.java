@@ -2,6 +2,8 @@ package com.gong.jtld.test;
 
 import com.gong.jtld.*;
 
+import java.util.List;
+
 import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_highgui.*;
 
@@ -18,6 +20,7 @@ public class TestRun2 {
 
 
         BoundingBox                 trackerPredictedBoundingBox = null;
+        NearestNeighbor.Foo         trackerConfidence           = null;
         BoundingBox                 detectedBoundingBox         = null;
         BoundingBox                 boundingBox                 = new BoundingBox(300,30,335,105);
         BoundingBox                 updatedBoundingBox          = new BoundingBox(300,30,335,105);
@@ -47,29 +50,58 @@ public class TestRun2 {
 
             //TODO: prealloc and pass in trackerResult
             trackerResult      = jtdl.tracker.track(currentGray, nextGray, boundingBox );
-            int[] validIndexes = Tracker.getValidIndexes(trackerResult);
 
-            detectorResult = jtdl.detect( nextGray );
 
-            if( validIndexes.length > 0 ) {
+
+            //int[] validIndexes = Tracker.getValidIndexes(trackerResult);
+            //TODO: tracker should have confidence, and isValid (> threshold)
+
+            //detectorResult = jtdl.detect( nextGray );
+
+            if( trackerResult.isValid() ) {
 
                 //This is where
-                trackerPredictedBoundingBox = Tracker.predictBoundingBox( boundingBox, trackerResult, validIndexes );
+                trackerPredictedBoundingBox = Tracker.predictBoundingBox( boundingBox, trackerResult );
+                //TODO: getFooWithGrayScale
+                trackerConfidence = jtdl.nearestNeighbor.getFooDebug( nextGray, trackerPredictedBoundingBox );
+                if( trackerConfidence.relativeSimilarity > jtdl.nearestNeighbor.getValidThreshold() ) {
+                    System.out.println("Tracked and similar");
+                }else {
+                    System.out.println("Tracked but not similar");
+                }
+//
+//                //TODO: put later
+                if( !trackerPredictedBoundingBox.isOutsideImage(nextGray) ) {
+
+                    List<Jtdl.SubResult> dResult = jtdl.detect( nextGray );
+                    if( dResult.size() == 0 ) {
+                        System.out.println("No Detections");
+                    }else {
+                        for(Jtdl.SubResult sr : dResult ) {
+                            System.out.println("SR.Votes:" + sr.fernValue + " " + sr.similarity );
+                            cvSaveImage("/tmp/SRfound-"+ sr.boundingBox + "-v-" + sr.fernValue + "-" +sr.similarity+ ".png", Utils.getImagePatch( next, sr.boundingBox ) );
+                        }
+                    }
+
+//
+//                    for(Jtdl.SubResult sr : dResult ) {
+//                        cvSaveImage("/tmp/help" + sr + ".png", Utils.getImagePatch( nextGray, sr.boundingBox ) );
+//                    }
+//                    cvSaveImage("/tmp/tracked" + trackerPredictedBoundingBox + ".png", Utils.getImagePatch( nextGray, trackerPredictedBoundingBox ) );
+                    jtdl.learn( nextGray, trackerPredictedBoundingBox );
+                }
 
 
 
             }else {
+                System.out.println("Not Tracked in Image:" + inStr);
+                trackerConfidence = null;
 
-                System.out.println("Uh oh, no valid Indexes:" + inStr);
-                //Try to detect the object
-                //jtdl.detect();
-
-                //need to wait till detector finds object again
-                //null BB.
             }
 
+            updatedBoundingBox = trackerPredictedBoundingBox;
+
             boundingBox = updatedBoundingBox;
-            //currentGray.release();
             currentGray = nextGray;
 
             if( boundingBox.isOutsideImage( next.width(), next.height() ) ) {
@@ -83,21 +115,21 @@ public class TestRun2 {
                     cvPoint(Math.round(updatedBoundingBox.x2), Math.round(updatedBoundingBox.y2)),
                     CV_RGB(0, 255, 0), 1, 8, 0);
 
-            //Flow vectors
-            for( int y=0;y<validIndexes.length;y++) {
-                trackerResult.origPoints.position(validIndexes[y]);
-                trackerResult.foundPoints.position(validIndexes[y]);
-                cvCircle( next,
-                          cvPoint(Math.round(trackerResult.foundPoints.x()),
-                                  Math.round(trackerResult.foundPoints.y())),
-                          1,
-                          CV_RGB(255, 255, 0), 1, 8, 0 );
-                cvLine(next,
-                   cvPoint(Math.round(trackerResult.origPoints.x()),Math.round(trackerResult.origPoints.y())),
-                   cvPoint(Math.round(trackerResult.foundPoints.x()),Math.round(trackerResult.foundPoints.y())),
-                   CV_RGB(255, 0, 0), 1, 8, 0);
-
-            }
+//            //Flow vectors
+//            for( int y=0;y<validIndexes.length;y++) {
+//                trackerResult.origPoints.position(validIndexes[y]);
+//                trackerResult.foundPoints.position(validIndexes[y]);
+//                cvCircle( next,
+//                          cvPoint(Math.round(trackerResult.foundPoints.x()),
+//                                  Math.round(trackerResult.foundPoints.y())),
+//                          1,
+//                          CV_RGB(255, 255, 0), 1, 8, 0 );
+//                cvLine(next,
+//                   cvPoint(Math.round(trackerResult.origPoints.x()),Math.round(trackerResult.origPoints.y())),
+//                   cvPoint(Math.round(trackerResult.foundPoints.x()),Math.round(trackerResult.foundPoints.y())),
+//                   CV_RGB(255, 0, 0), 1, 8, 0);
+//
+//            }
 
             cvSaveImage("/tmp/imageout-" + outStr + ".png", next);
             //jtdl.fern.dump();

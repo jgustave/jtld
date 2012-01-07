@@ -64,8 +64,8 @@ public class Test4 {
 
             result      = tracker.track(currentGray, nextGray, boundingBox );
             int[] validIndexes = Tracker.getValidIndexes(result);
-            if( validIndexes.length > 0 ) {
-                updatedBoundingBox = Tracker.predictBoundingBox(boundingBox, result, validIndexes);
+            if( result.isValid() ) {
+                updatedBoundingBox = Tracker.predictBoundingBox(boundingBox, result);
             }else {
                 System.out.println("Uh oh, no valid Indexes:" + inStr);
                 //need to wait till detector finds object again

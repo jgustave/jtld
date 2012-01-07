@@ -2,6 +2,8 @@ package com.gong.jtld.test;
 
 import com.gong.jtld.*;
 
+import java.util.List;
+
 import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_highgui.*;
 
@@ -48,7 +50,7 @@ public class TestRun {
             int[] validIndexes = Tracker.getValidIndexes(result);
 
             if( validIndexes.length > 0 ) {
-                updatedBoundingBox = Tracker.predictBoundingBox( boundingBox, result, validIndexes);
+                updatedBoundingBox = Tracker.predictBoundingBox( boundingBox, result);
 
                 foo = nearestNeighbor.getFooDebug( nextGray, updatedBoundingBox );
                 //TODO: jtdl.fern.measureVotes( nextGray, bestBox )
@@ -60,6 +62,18 @@ public class TestRun {
 
 
                 if( !boundingBox.isOutsideImage(nextGray) ) {
+
+                    List<Jtdl.SubResult> srs = jtdl.detect( next );
+                    if( srs.size() == 0 ) {
+                        System.out.println("No Detections");
+                    }else {
+                        for(Jtdl.SubResult sr : srs ) {
+                            System.out.println("SR.Votes:" + sr.fernValue + " " + sr.similarity );
+                            cvSaveImage("/tmp/SRfound-"+ sr.boundingBox + "-v-" + sr.fernValue + "-" +sr.similarity+ ".png", Utils.getImagePatch( next, sr.boundingBox ) );
+                        }
+                    }
+
+
                     jtdl.learn( nextGray, updatedBoundingBox );
                 }
 
@@ -109,22 +123,25 @@ public class TestRun {
         jtdl.nearestNeighbor.dump();
         System.out.println("Searching...");
         IplImage searchImage = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00001.png", CV_LOAD_IMAGE_GRAYSCALE );
-        jtdl.detect( searchImage );
+        IplImage searchImage2 = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00001.png", CV_LOAD_IMAGE_GRAYSCALE );
 
-//        double best = 0.0;
-//        for( ScanningBoundingBoxes boxes : jtdl.scanningBoundingBoxesList ) {
-//            for( ScaledBoundingBox scaledBox : boxes.boundingBoxes ) {
-//                float value = jtdl.fern.measureVotesDebug(searchImage, scaledBox );
-//                if( value > 0.0 ) {
-//                    NearestNeighbor.Foo foo = jtdl.nearestNeighbor.getFooDebug( searchImage, scaledBox );
-//                    if( foo.relativeSimilarity > best ) {
-//                        best = foo.relativeSimilarity;
-//                        System.out.println("Votes:" + value + " " + foo.relativeSimilarity );
-//                        cvSaveImage("/tmp/found-"+ scaledBox + "-v-" + value + "-" +foo.relativeSimilarity+ ".png", Utils.getImagePatch( searchImage, scaledBox ) );
-//                    }
-//                }
-//            }
-//        }
+        List<Jtdl.SubResult> srs = jtdl.detect( searchImage2 );
+        for(Jtdl.SubResult sr : srs ) {
+            System.out.println("SR.Votes:" + sr.fernValue + " " + sr.similarity );
+            cvSaveImage("/tmp/SRfound-"+ sr.boundingBox + "-v-" + sr.fernValue + "-" +sr.similarity+ ".png", Utils.getImagePatch( searchImage, sr.boundingBox ) );
+        }
+
+        for( ScaledBoundingBox scaledBox : jtdl.scanningBoxes ) {
+            float value = jtdl.fern.measureVotesDebug(searchImage, scaledBox );
+            if( value > jtdl.fern.getNumFerns()*0.55 ) {
+                NearestNeighbor.Foo foo = jtdl.nearestNeighbor.getFooDebug( searchImage, scaledBox );
+                if( foo.relativeSimilarity > 0.55 ) {
+                    //best = foo.relativeSimilarity;
+                    System.out.println("Votes:" + value + " " + foo.relativeSimilarity );
+                    cvSaveImage("/tmp/found-"+ scaledBox + "-v-" + value + "-" +foo.relativeSimilarity+ ".png", Utils.getImagePatch( searchImage, scaledBox ) );
+                }
+            }
+        }
 
     }
 

@@ -28,14 +28,14 @@ public class Fern {
 
     //private final List<int[]> positiveFeatures = new ArrayList<int[]>();
     //private final List<int[]> negativeFeatures = new ArrayList<int[]>();
-    private float minThreshold = 0.6f;
+    private float minThreshold = 0.5f;
     private float negativeThreshold;
     private float positiveThreshold;
 
     private final int numFerns;
     private final int featuresPerFern;
-    private final int numWarpsInit   = 100;
-    private final int numWarpsUpdate = 20;
+    private final int numWarpsInit   = 250;
+    private final int numWarpsUpdate = 200;
 
 
     //[Scale][numFerns*featuresPerFern]  since we want to recognize the object at multiple scales
@@ -62,9 +62,9 @@ public class Fern {
         this.negativeCounter    = new int[numFerns][(int)Math.pow(2,featuresPerFern)];
         this.posteriors         = new float[numFerns][(int)Math.pow(2,featuresPerFern)];
 
-        double scaling = 0.02;
-        double theta   = 20.0;
-        double phi     = 20.0;
+        double scaling = 0.10;
+        double theta   = 30.0;
+        double phi     = 30.0;
 
         generator = new opencv_features2d.PatchGenerator(0.0, //background min
                                                          0.0, //background max

@@ -38,6 +38,7 @@ public class Jtdl {
     public final NearestNeighbor                nearestNeighbor;
     //Semi Nieve Bayesian Image Detector based on Ferns
     public final Fern                           fern;
+    public final Cluster                        cluster             = new Cluster();
 
     private      BoundingBox                    currentBoundingBox = null;
 
@@ -196,40 +197,54 @@ public class Jtdl {
 //        System.out.println("PostBestFern:" + fern.measureVotesDebug( grayScaleImage, bestBox ) );
     }
 
-    public DetectorResult detect(IplImage image ) {
-        DetectorResult result = null;
+    public List<SubResult> detect(IplImage image ) {
+        List<SubResult> subResult = new ArrayList<SubResult>();
+        List<SubResult> result    = new ArrayList<SubResult>();
+        float fernThreshold = fern.getNumFerns()*fern.getMinThreshold();
 
         cvConvertImage( image, grayScaleImage, 0 );
         cvIntegral(grayScaleImage, iisum, iisqsum, null );
         cvSmooth( grayScaleImage, grayScaleImage, CV_GAUSSIAN, 9,9, 1.5, 1.5 );
-        double bestNN = 0.0;
+
         for( ScaledBoundingBox scaledBox : this.scanningBoxes ) {
 
             //First exclude areas that don't have high enough variance.
             double testVariance = Utils.getVariance( scaledBox, iisum, iisqsum );
             if( testVariance >= variance ) {
-
                 //Then exclude if fern isn't good enough
-                float value = fern.measureVotes(grayScaleImage, scaledBox );
-                if( value > fern.getNumFerns()*(fern.getMinThreshold()) ) {
-
-
+                float fernValue = fern.measureVotes(grayScaleImage, scaledBox );
+                if( fernValue > fernThreshold ) {
 
                     NearestNeighbor.Foo foo = nearestNeighbor.getFooDebug( grayScaleImage, scaledBox );
-                    if( foo.relativeSimilarity > bestNN ) {
 
-
-
-                        bestNN = foo.relativeSimilarity;
-                        double testVar = Utils.getVariance( scaledBox, iisum, iisqsum );
-                        System.out.println("Fern:" + value + " NN:" + foo.relativeSimilarity + " var:" + testVar  );
-                        cvSaveImage("/tmp/found-"+ scaledBox + "-v-" + value + "-" +foo.relativeSimilarity+"-var:"+testVar+ ".png", Utils.getImagePatch( grayScaleImage, scaledBox ) );
+                    if( foo.relativeSimilarity > nearestNeighbor.getValidThreshold() ) {
+                        //result.add( fernValue, foo.relativeSimilarity, scaledBox );
+                        subResult.add( new SubResult( fernValue, foo.relativeSimilarity, scaledBox ) );
                     }
                 }
             }
         }
 
-        return( result );
+        if( subResult.size() > 0 ) {
+            result = this.cluster.cluster( subResult );
+        }
+
+        return(result);
+
     }
 
+    public static class SubResult {
+        public final float              fernValue;
+        public final double             similarity;
+        public final BoundingBox        boundingBox;
+
+        public SubResult (float fernValue, double similarity, BoundingBox boundingBox) {
+            this.fernValue = fernValue;
+            this.similarity = similarity;
+            this.boundingBox = boundingBox;
+        }
+        public String toString() {
+            return("SR: sim:" + similarity +" fern:" + fernValue + " " + boundingBox );
+        }
+    }
 }
