@@ -14,8 +14,9 @@ public class NearestNeighbor {
 
 
     private final int                           patchSize;
-    private       double                        validThreshold          = 0.57;
-    private       double                        positiveThreshold       = 0.57;
+    private       double                        validSwitchThreshold    = 0.695;
+    private       double                        validThreshold          = 0.65;
+    private       double                        positiveThreshold       = 0.60;
     private       double                        negativeThreshold       = 0.5;
 
     public NearestNeighbor( int patchSize ) {
@@ -24,6 +25,10 @@ public class NearestNeighbor {
 
     public double getValidThreshold () {
         return validThreshold;
+    }
+
+    public double getValidSwitchThreshold () {
+        return validSwitchThreshold;
     }
 
     public void dump() {
@@ -38,8 +43,8 @@ public class NearestNeighbor {
                       List<BoundingBox> bestOverlaps,
                       List<BoundingBox> worstOverlaps ) {
 
-        validThreshold      = 0.57;
-        positiveThreshold   = 0.57;
+        validThreshold      = 0.65;
+        positiveThreshold   = 0.60;
         negativeThreshold   = 0.5;
         this.positivePatchPatterns.clear();
         this.negativePatchPatterns.clear();

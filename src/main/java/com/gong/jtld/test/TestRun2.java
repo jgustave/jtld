@@ -50,7 +50,7 @@ public class TestRun2 {
 
             //TODO: prealloc and pass in trackerResult
             trackerResult      = jtdl.tracker.track(currentGray, nextGray, boundingBox );
-
+            List<Jtdl.SubResult> dResult = null;
 
 
             //int[] validIndexes = Tracker.getValidIndexes(trackerResult);
@@ -71,17 +71,19 @@ public class TestRun2 {
                 }
 //
 //                //TODO: put later
-                if( !trackerPredictedBoundingBox.isOutsideImage(nextGray) ) {
 
-                    List<Jtdl.SubResult> dResult = jtdl.detect( nextGray );
-                    if( dResult.size() == 0 ) {
-                        System.out.println("No Detections");
-                    }else {
-                        for(Jtdl.SubResult sr : dResult ) {
-                            System.out.println("SR.Votes:" + sr.fernValue + " " + sr.similarity );
-                            cvSaveImage("/tmp/SRfound-"+ sr.boundingBox + "-v-" + sr.fernValue + "-" +sr.similarity+ ".png", Utils.getImagePatch( next, sr.boundingBox ) );
-                        }
+
+                dResult = jtdl.detect( nextGray );
+                if( dResult.size() == 0 ) {
+                    System.out.println("No Detections");
+                }else {
+                    for(Jtdl.SubResult sr : dResult ) {
+                        System.out.println("SR.Votes:" + sr.fernValue + " " + sr.similarity );
+                        cvSaveImage("/tmp/SRfound-"+ sr.boundingBox + "-v-" + sr.fernValue + "-" +sr.similarity+ ".png", Utils.getImagePatch( next, sr.boundingBox ) );
                     }
+                }
+
+                if( !trackerPredictedBoundingBox.isOutsideImage(nextGray) ) {
 
 //
 //                    for(Jtdl.SubResult sr : dResult ) {
@@ -114,6 +116,16 @@ public class TestRun2 {
                     cvPoint(Math.round(updatedBoundingBox.x1), Math.round(updatedBoundingBox.y1)),
                     cvPoint(Math.round(updatedBoundingBox.x2), Math.round(updatedBoundingBox.y2)),
                     CV_RGB(0, 255, 0), 1, 8, 0);
+            if( dResult != null ) {
+                for(Jtdl.SubResult sr : dResult ) {
+                    cvRectangle(
+                            next,
+                            cvPoint(Math.round(sr.boundingBox.x1), Math.round(sr.boundingBox.y1)),
+                            cvPoint(Math.round(sr.boundingBox.x2), Math.round(sr.boundingBox.y2)),
+                            CV_RGB(20, 255, 255), 1, 8, 0);
+                }
+            }
+            dResult = null;
 
 //            //Flow vectors
 //            for( int y=0;y<validIndexes.length;y++) {

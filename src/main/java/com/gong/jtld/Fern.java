@@ -28,7 +28,7 @@ public class Fern {
 
     //private final List<int[]> positiveFeatures = new ArrayList<int[]>();
     //private final List<int[]> negativeFeatures = new ArrayList<int[]>();
-    private float minThreshold = 0.5f;
+    private float minThreshold = 0.60f;
     private float negativeThreshold;
     private float positiveThreshold;
 

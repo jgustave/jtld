@@ -57,6 +57,7 @@ public class Jtdl {
     private float   maxOverlapCutoff        = 0.2f;
     private int     initialNegativeSamples  = 100;
     private int     updateNegativeSamples   = 100;
+    public final float trackerWeight = 10.0f;
 
     //After reading in the image (in color) we convert it to Gray scale
     private      IplImage   grayScaleImage = null;
