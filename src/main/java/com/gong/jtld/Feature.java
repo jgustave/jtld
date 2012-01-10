@@ -3,6 +3,7 @@ package com.gong.jtld;
 import com.googlecode.javacpp.BytePointer;
 import com.googlecode.javacv.cpp.opencv_core;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
+import static com.googlecode.javacv.cpp.opencv_highgui.cvSaveImage;
 
 /**
  * This is a Fern Feature.
@@ -30,8 +31,9 @@ public class Feature {
      * @return 0 or 1
      */
     public int eval (IplImage image) {
-        
+
         if( x1 >= image.width() || x2 >= image.width() || y1 >= image.height() || y2 >= image.height() ) {
+            cvSaveImage("/tmp/weird.png", image );
             throw new RuntimeException("Feature is off image " +  this + " w:" + image.width() + " h:" + image.height() );
         }
         int         widthStep = image.widthStep();

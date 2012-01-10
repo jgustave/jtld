@@ -198,6 +198,9 @@ public class Jtdl {
      * @param image
      */
     public void processFrame( IplImage nextImage ) {
+        if( nextImage.width() != grayImage1.width() ||  nextImage.height() != grayImage1.height() ) {
+            throw new RuntimeException("Change in dimensions" );
+        }
         IplImage        currentGray                 = getCurrentGray();
         IplImage        nextGray                    = getNextGray();
         TrackerResult   trackerResult               = null;
@@ -370,6 +373,10 @@ public class Jtdl {
         List<SubResult> subResult       = new ArrayList<SubResult>();
         List<SubResult> result          = new ArrayList<SubResult>();
         float           fernThreshold   = fern.getNumFerns()*fern.getMinThreshold();
+
+        cvSaveImage("/tmp/g1.png", grayImage1 );
+        cvSaveImage("/tmp/g2.png", grayImage2 );
+        cvSaveImage("/tmp/g3.png", smoothedGray );
 
         for( ScaledBoundingBox scaledBox : this.scanningBoxes ) {
 
