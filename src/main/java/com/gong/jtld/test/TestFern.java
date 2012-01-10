@@ -9,12 +9,13 @@ import jpaul.DataStructs.UnionFind;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
+import static com.googlecode.javacv.cpp.opencv_core.cvRect;
+import static com.googlecode.javacv.cpp.opencv_core.cvSetImageROI;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -61,6 +62,36 @@ public class TestFern {
         }
 
     }
+
+    @Test
+    /**
+     * Verify Features are created correctly and compare pixels correctly.
+     */
+    public void testFeaturesRoi() {
+        int width  = 20;
+        int height = 30;
+        IplImage testImage = IplImage.create( width, height, IPL_DEPTH_8U, 1 );
+
+        ByteBuffer buffer = testImage.getByteBuffer();
+        for( int x=0;x<width*height;x++) {
+            buffer.put(x,(byte)x);
+        }
+
+
+        assertEquals(0, Feature.getVal( testImage, 0, 0));
+        assertEquals(1, Feature.getVal( testImage, 1, 0));
+        assertEquals(2, Feature.getVal( testImage, 2, 0));
+
+        opencv_core.CvRect rect = cvRect(0,1,width,height-1);
+        cvSetImageROI(testImage, rect );
+
+        assertEquals(20, Feature.getVal( testImage, 0, 0));
+        assertEquals(21, Feature.getVal( testImage, 1, 0));
+        assertEquals(22, Feature.getVal( testImage, 2, 0));
+
+
+    }
+
 
     @Test
     public void testPartition() {

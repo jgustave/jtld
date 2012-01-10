@@ -11,7 +11,8 @@ import static com.googlecode.javacv.cpp.opencv_imgproc.CV_GAUSSIAN;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvSmooth;
 import static com.gong.jtld.Jtdl.SCALES;
 
-
+//import static com.googlecode.javacv.cpp.opencv_core.cvSa/
+import static com.googlecode.javacv.cpp.opencv_highgui.cvSaveImage;
 import java.util.*;
 
 /**
@@ -243,6 +244,22 @@ public class Fern {
         patch = Utils.getImagePatch( image, boundingBox );
         return( measureVotes( getFeatures( patch, boundingBox.scaleIndex ) ) );
         //TODO: clean up memory
+    }
+
+    public float measureVotesNew( IplImage image, ScaledBoundingBox boundingBox ) {
+
+        //TODO: member
+        int[] features = null;
+
+        //TODO: member
+        opencv_core.CvRect rect = boundingBox.getRect();
+
+        cvSetImageROI( image, rect );
+
+        features = getFeatures( image, boundingBox.scaleIndex );
+        float votes = measureVotes( features );
+        cvResetImageROI( image );
+        return( votes );
     }
 
 
