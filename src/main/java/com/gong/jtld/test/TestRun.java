@@ -63,7 +63,7 @@ public class TestRun {
 
                 if( !boundingBox.isOutsideImage(nextGray) ) {
 
-                    List<Jtdl.SubResult> srs = jtdl.detect( next );
+                    List<Jtdl.SubResult> srs = jtdl.detect( );
                     if( srs.size() == 0 ) {
                         System.out.println("No Detections");
                     }else {
@@ -74,7 +74,7 @@ public class TestRun {
                     }
 
 
-                    jtdl.learn( nextGray, updatedBoundingBox );
+                    jtdl.learn(  );
                 }
 
             }else {
@@ -125,7 +125,7 @@ public class TestRun {
         IplImage searchImage = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00001.png", CV_LOAD_IMAGE_GRAYSCALE );
         IplImage searchImage2 = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00001.png", CV_LOAD_IMAGE_GRAYSCALE );
 
-        List<Jtdl.SubResult> srs = jtdl.detect( searchImage2 );
+        List<Jtdl.SubResult> srs = jtdl.detect( );
         for(Jtdl.SubResult sr : srs ) {
             System.out.println("SR.Votes:" + sr.fernValue + " " + sr.similarity );
             cvSaveImage("/tmp/SRfound-"+ sr.boundingBox + "-v-" + sr.fernValue + "-" +sr.similarity+ ".png", Utils.getImagePatch( searchImage, sr.boundingBox ) );

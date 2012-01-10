@@ -1,5 +1,6 @@
 package com.gong.jtld;
 
+import com.gong.jtld.NearestNeighbor.Foo;
 import com.googlecode.javacv.cpp.opencv_core;
 import com.googlecode.javacv.cpp.opencv_core.CvMat;
 import com.googlecode.javacv.cpp.opencv_core.IplImage;
@@ -7,8 +8,7 @@ import com.googlecode.javacv.cpp.opencv_core.IplImage;
 
 import static com.googlecode.javacv.cpp.opencv_core.*;
 
-import static com.googlecode.javacv.cpp.opencv_highgui.cvConvertImage;
-import static com.googlecode.javacv.cpp.opencv_highgui.cvSaveImage;
+import static com.googlecode.javacv.cpp.opencv_highgui.*;
 import static com.googlecode.javacv.cpp.opencv_imgproc.CV_GAUSSIAN;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvIntegral;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvSmooth;
@@ -40,11 +40,19 @@ public class Jtdl {
     public final Fern                           fern;
     public final Cluster                        cluster             = new Cluster();
 
-    private      BoundingBox                    currentBoundingBox = null;
+    private      BoundingBox                    currentBoundingBox  = null;
+
+    private      IplImage                       grayImage1          = null;
+    private      IplImage                       grayImage2          = null;
+    private      boolean                        isCurrentImageOne   = true;
+    private      IplImage                       smoothedGray        = null;
+
+    //Matricies used in calculating Variance of in an image
+    private      CvMat                          iisum               = null;
+    private      CvMat                          iisqsum             = null;
 
     //Template Bounding boxes used when scanning the image for matches.
-    //public       List<ScanningBoundingBoxes>    scanningBoundingBoxesList;
-    public       ScaledBoundingBox[]            scanningBoxes               = null;
+    public       ScaledBoundingBox[]            scanningBoxes       = null;
 
     //Various Parameters
     private int     numFerns                = 20;
@@ -60,11 +68,11 @@ public class Jtdl {
     public final float trackerWeight = 10.0f;
 
     //After reading in the image (in color) we convert it to Gray scale
-    private      IplImage   grayScaleImage = null;
+    //private      IplImage   grayScaleImage = null;
 
-    //Matricies used in calculating Variance of in an image
-    private      CvMat      iisum   = null;
-    private      CvMat      iisqsum = null;
+
+
+
 
     private final   CvScalar   mean     = new CvScalar(1);
     private final   CvScalar   stdDev   = new CvScalar(1);
@@ -76,6 +84,10 @@ public class Jtdl {
         nearestNeighbor = new NearestNeighbor( patchSize );
     }
 
+    public BoundingBox getCurrentBoundingBox () {
+        return currentBoundingBox;
+    }
+
     @SuppressWarnings ({"unchecked"})
     /**
      * There is an assumption (in several places) that the dimensions of the image will not change after init.
@@ -84,28 +96,44 @@ public class Jtdl {
     public void init(IplImage initialImage, BoundingBox initialBoundingBox ) {
 
         this.currentBoundingBox = initialBoundingBox;
-        if( grayScaleImage != null ) {
-            //Not sure how/if GC is going to double release.. this may not be necessary
-            grayScaleImage.release();
+
+        if(grayImage1 != null ) {
+            grayImage1.release();
+        }
+        grayImage1 = IplImage.create( initialImage.width(), initialImage.height(), IPL_DEPTH_8U, 1 );
+
+        if( grayImage2 != null ) {
+            grayImage2.release();
+        }
+        grayImage2 = IplImage.create( initialImage.width(), initialImage.height(), IPL_DEPTH_8U, 1 );
+        isCurrentImageOne = true;
+
+        if( smoothedGray != null ) {
+            smoothedGray.release();
+        }
+        smoothedGray = IplImage.create( initialImage.width(), initialImage.height(), IPL_DEPTH_8U, 1 );
+
+        tracker.init( initialImage );
+
+        //Init Matricies used to calculate Variance
+        if( iisum != null ) {
             iisum.release();
-            iisqsum.release();
         }
         iisum          = opencv_core.CvMat.create(initialImage.height() + 1, initialImage.width() + 1, CV_32F, 1);
+        if( iisqsum != null ) {
+            iisqsum.release();
+        }
         iisqsum        = opencv_core.CvMat.create(initialImage.height() + 1, initialImage.width() + 1, CV_64F, 1);
-        grayScaleImage = IplImage.create( initialImage.width(), initialImage.height(), IPL_DEPTH_8U, 1 );
 
-        cvConvertImage( initialImage, grayScaleImage, 0 );
-        cvIntegral(grayScaleImage, iisum, iisqsum, null );
+        IplImage    nextGray    = getNextGray();
+        cvConvertImage( initialImage, nextGray, 0 );
+        cvIntegral(nextGray, iisum, iisqsum, null );
 
-        cvAvgSdv( grayScaleImage, mean, stdDev, null );
+        cvAvgSdv( nextGray, mean, stdDev, null );
 
         variance = stdDev.getVal(0) * stdDev.getVal(0) * 0.5;
 
-//        scanningBoundingBoxesList = BoundingBox.createTestBoxes( initialBoundingBox,
-//                                                                 SCALES,
-//                                                                 initialImage.width(),
-//                                                                 initialImage.height(),
-//                                                                 minWindowSize );
+        //These are a bunch of Bounding Boxes that we use for searching.
         scanningBoxes = BoundingBox.createTestBoxeArray( initialBoundingBox,
                                                          SCALES,
                                                          initialImage.width(),
@@ -121,7 +149,7 @@ public class Jtdl {
                                                                               scanningBoxes,
                                                                               maxOverlapCutoff );
         Collections.shuffle( worstOverlaps ); //for random test/train split
-        List<ScaledBoundingBox> variedWorstOverlaps = getVariantOverlaps(grayScaleImage, worstOverlaps);
+        List<ScaledBoundingBox> variedWorstOverlaps = getVariantOverlaps( worstOverlaps );
 
         worstOverlaps       = worstOverlaps.subList(0,Math.min(initialNegativeSamples,worstOverlaps.size()));
         variedWorstOverlaps = variedWorstOverlaps.subList(0,Math.min(initialNegativeSamples,variedWorstOverlaps.size()));
@@ -137,18 +165,149 @@ public class Jtdl {
         //But keep all the positive examples.
         //Save the test sets to update thresholds.
 
-        nearestNeighbor.init(grayScaleImage, (List)bestOverlaps, (List)trainWorstOverlaps );
-        fern.init(grayScaleImage, initialBoundingBox, bestOverlaps, trainVariedWorstOverlaps );
+        nearestNeighbor.init(nextGray, (List)bestOverlaps, (List)trainWorstOverlaps );
+        fern.init(nextGray, initialBoundingBox, bestOverlaps, trainVariedWorstOverlaps );
 
         //Update thresholds
-        nearestNeighbor.updateNearestNeighborThreshold( grayScaleImage, testWorstOverlaps );
-        fern.updateMinThreshold( grayScaleImage, testVariedWorstOverlaps );
+        nearestNeighbor.updateNearestNeighborThreshold( nextGray, testWorstOverlaps );
+        fern.updateMinThreshold( nextGray, testVariedWorstOverlaps );
+
+        flipGrayImages();
     }
 
-    public BoundingBox getCurrentBoundingBox () {
-        return currentBoundingBox;
+    public IplImage getCurrentGray() {
+        if(isCurrentImageOne) {
+            return( grayImage1 );
+        }else {
+            return( grayImage2 );
+        }
     }
-//public void
+    public IplImage getNextGray() {
+        if(isCurrentImageOne) {
+            return( grayImage2 );
+        }else {
+            return( grayImage1 );
+        }
+    }
+    private void flipGrayImages() {
+        isCurrentImageOne =!isCurrentImageOne;
+    }
+
+    /**
+     * Should update currentBoundingBox with new location.. or set it to null if lost
+     * @param image
+     */
+    public void processFrame( IplImage nextImage ) {
+        IplImage        currentGray                 = getCurrentGray();
+        IplImage        nextGray                    = getNextGray();
+        TrackerResult   trackerResult               = null;
+        BoundingBox     trackerPredictedBoundingBox = null;
+        Foo             trackerConfidence           = null;
+        List<Jtdl.SubResult> dResult = null;
+
+        //Load the image as Gray Scale, etc
+        prepNextImage( nextImage );
+
+
+        //If we currently have a Bounding Box
+        if( currentBoundingBox != null ) {
+
+            //Use the OPtical Tracker to track to next
+            trackerResult      = tracker.track( currentGray, nextGray, currentBoundingBox );
+
+            if( trackerResult.isValid() ) {
+                //TODO: null these if unstable
+                trackerPredictedBoundingBox = Tracker.predictBoundingBox( currentBoundingBox, trackerResult );
+                trackerConfidence           = nearestNeighbor.getFooDebug( nextGray, trackerPredictedBoundingBox );
+            }else {
+                trackerPredictedBoundingBox = null;
+                trackerConfidence = null;
+            }
+        }
+
+        //Now use the image detector to see if we can find object elsewhere
+        dResult = detect( );
+
+        if( trackerConfidence != null ) {
+
+            if( dResult.size() > 0 ) {
+
+                System.out.println("Detected:" + dResult.size() );
+                int otherDetections=0;
+                Jtdl.SubResult savedDetection = null;
+                for(Jtdl.SubResult subResult : dResult ) {
+                    if( subResult.boundingBox.overlap( trackerPredictedBoundingBox ) < 0.5f
+                        && subResult.similarity > trackerConfidence.relativeSimilarity ) {
+                        otherDetections++;
+                        savedDetection = subResult;
+                    }
+                }
+
+                if( otherDetections == 1
+                    && !trackerPredictedBoundingBox.isOutsideImage( nextGray )
+                    && savedDetection.similarity > nearestNeighbor.getValidSwitchThreshold() ) {
+                    //boxType = DETECTED;
+                    System.out.println( "Found a Better Object!" );
+                    //We found a more confident detection outside of the tracker...
+                    //Change to it.
+                    currentBoundingBox = savedDetection.boundingBox;
+                }else {
+                    //We are going to weight any highly overlapping Detected BBs with the Tracker BB
+                    int closeX1 = 0;
+                    int closeY1 = 0;
+                    int closeX2 = 0;
+                    int closeY2 = 0;
+                    int numCloseDetections = 0;
+                    for(Jtdl.SubResult subResult : dResult ) {
+                        if( subResult.boundingBox.overlap( trackerPredictedBoundingBox ) > 0.7f ){
+                            numCloseDetections++;
+                            closeX1 += subResult.boundingBox.x1;
+                            closeY1 += subResult.boundingBox.y1;
+                            closeX2 += subResult.boundingBox.x2;
+                            closeY2 += subResult.boundingBox.y2;
+                        }
+                    }
+                    if( numCloseDetections > 0 ) {
+                        //boxType = WEIGHTED;
+                        System.out.println("NumCloseDetections:" + numCloseDetections );
+                        //We are going to modify the tracker slightly with our results.
+                        //But we are going to weight it to favor the Tracker
+                        float weight = (trackerWeight + numCloseDetections);
+                        currentBoundingBox = new BoundingBox( (trackerWeight*trackerPredictedBoundingBox.x1 + closeX1) / weight,
+                                                              (trackerWeight*trackerPredictedBoundingBox.y1 + closeY1) / weight,
+                                                              (trackerWeight*trackerPredictedBoundingBox.x2 + closeX2) / weight,
+                                                              (trackerWeight*trackerPredictedBoundingBox.y2 + closeY2) / weight );
+                    }else {
+                        //Just stick with the optical tracker
+                        System.out.println("Stick with Tracker but detected:" + dResult.size() );
+                        currentBoundingBox = trackerPredictedBoundingBox;
+                    }
+                }
+            }else {
+                System.out.println("No Detections");
+                currentBoundingBox = trackerPredictedBoundingBox;
+            }
+        }else { //not tracked by tracker
+            if( dResult.size() == 1
+                &&  dResult.get(0).similarity > nearestNeighbor.getValidSwitchThreshold() ) {
+                System.out.println("No Tracker, but We detected...");
+                //boxType = DETECTED;
+                currentBoundingBox = dResult.get(0).boundingBox;
+            }else {
+                System.out.println("We are lost.");
+                currentBoundingBox = null;
+            }
+        }
+
+
+        //Now learn what's inside the new BB
+        if(  currentBoundingBox != null  &&  !currentBoundingBox.isOutsideImage(nextGray) ) {
+            learn( );
+        }
+
+
+        flipGrayImages();
+    }
 
     /**
      * We only want worst overlaps if they are highly variant.. meaning they have information in them.
@@ -156,7 +315,7 @@ public class Jtdl {
      * @param worstOverlaps
      * @return
      */
-    private List<ScaledBoundingBox> getVariantOverlaps (IplImage image, List<ScaledBoundingBox> worstOverlaps ) {
+    private List<ScaledBoundingBox> getVariantOverlaps ( List<ScaledBoundingBox> worstOverlaps ) {
         List<ScaledBoundingBox> result = new ArrayList<ScaledBoundingBox>();
         for( ScaledBoundingBox box : worstOverlaps ) {
             if( Utils.getVariance( box, iisum, iisqsum ) > variance * 0.5 ) {
@@ -166,46 +325,51 @@ public class Jtdl {
         return( result );
     }
 
-    @SuppressWarnings ({"unchecked"})
-    public void learn (IplImage nextImage, BoundingBox updatedBoundingBox) {
+    /**
+     * convert to Gray, create integral and smoothed data, means and stddev
+     * @param nextImage The full color image
+     */
+    public void prepNextImage( IplImage nextImage ) {
+        IplImage        nextGray                    = getNextGray();
+        cvConvertImage( nextImage, nextGray, 0 );
+        cvIntegral(nextGray, iisum, iisqsum, null );
+        cvSmooth( nextGray, smoothedGray, CV_GAUSSIAN, 9,9, 1.5, 1.5 );
 
-        cvConvertImage( nextImage, grayScaleImage, 0 );
-        cvIntegral(grayScaleImage, iisum, iisqsum, null );
+        //TODO: might be optional:
+        cvAvgSdv( nextGray, mean, stdDev, null );
+        variance = stdDev.getVal(0) * stdDev.getVal(0) * 0.5;
+    }
 
+    @SuppressWarnings ({"unchecked", "RedundantCast"})
+    public void learn ( ) {
+        IplImage    nextGray    = getNextGray();
 
-        List<ScaledBoundingBox> bestOverlaps  = (List)Utils.getBestOverlappingScanBoxes( updatedBoundingBox,
+        List<ScaledBoundingBox> bestOverlaps  = (List)Utils.getBestOverlappingScanBoxes( currentBoundingBox,
                                                                              scanningBoxes,
                                                                              maxBestBoxes,
                                                                              minOverlapCutoff );
-        List<ScaledBoundingBox> worstOverlaps = (List)Utils.getWorstOverlappingScanBoxes( updatedBoundingBox,
+        List<ScaledBoundingBox> worstOverlaps = (List)Utils.getWorstOverlappingScanBoxes( currentBoundingBox,
                                                                               scanningBoxes,
                                                                               maxOverlapCutoff );
         Collections.shuffle( worstOverlaps );
-        List<ScaledBoundingBox> variedWorstOverlaps = getVariantOverlaps(grayScaleImage, worstOverlaps);
+        List<ScaledBoundingBox> variedWorstOverlaps = getVariantOverlaps( worstOverlaps );
 
         worstOverlaps       = worstOverlaps.subList(0,Math.min(updateNegativeSamples,
                                                                worstOverlaps.size()));
         variedWorstOverlaps = variedWorstOverlaps.subList(0,Math.min(updateNegativeSamples,
                                                                      variedWorstOverlaps.size()));
 
-        ScaledBoundingBox bestBox = bestOverlaps.get(0);
-//        System.out.println("BestNN:" + nearestNeighbor.getFooDebug(grayScaleImage, bestBox).relativeSimilarity);
-//        System.out.println("BestFern:" + fern.measureVotesDebug(grayScaleImage, bestBox) );
-//
-        nearestNeighbor.train(grayScaleImage, (List) bestOverlaps, (List) worstOverlaps);
-        fern.train(grayScaleImage, updatedBoundingBox, bestOverlaps, variedWorstOverlaps);
-//        System.out.println("PostBestNN:" + nearestNeighbor.getFooDebug(grayScaleImage, bestBox).relativeSimilarity);
-//        System.out.println("PostBestFern:" + fern.measureVotesDebug( grayScaleImage, bestBox ) );
+        //ScaledBoundingBox bestBox = bestOverlaps.get(0);
+
+        nearestNeighbor.train(nextGray, (List) bestOverlaps, (List) worstOverlaps);
+        fern.train(nextGray, currentBoundingBox, bestOverlaps, variedWorstOverlaps);
     }
 
-    public List<SubResult> detect(IplImage image ) {
-        List<SubResult> subResult = new ArrayList<SubResult>();
-        List<SubResult> result    = new ArrayList<SubResult>();
-        float fernThreshold = fern.getNumFerns()*fern.getMinThreshold();
-
-        cvConvertImage( image, grayScaleImage, 0 );
-        cvIntegral(grayScaleImage, iisum, iisqsum, null );
-        cvSmooth( grayScaleImage, grayScaleImage, CV_GAUSSIAN, 9,9, 1.5, 1.5 );
+    public List<SubResult> detect( ) {
+        IplImage        nextGray        = getNextGray();
+        List<SubResult> subResult       = new ArrayList<SubResult>();
+        List<SubResult> result          = new ArrayList<SubResult>();
+        float           fernThreshold   = fern.getNumFerns()*fern.getMinThreshold();
 
         for( ScaledBoundingBox scaledBox : this.scanningBoxes ) {
 
@@ -213,10 +377,10 @@ public class Jtdl {
             double testVariance = Utils.getVariance( scaledBox, iisum, iisqsum );
             if( testVariance >= variance ) {
                 //Then exclude if fern isn't good enough
-                float fernValue = fern.measureVotes(grayScaleImage, scaledBox );
+                float fernValue = fern.measureVotes(smoothedGray, scaledBox );
                 if( fernValue > fernThreshold ) {
 
-                    NearestNeighbor.Foo foo = nearestNeighbor.getFooDebug( grayScaleImage, scaledBox );
+                    NearestNeighbor.Foo foo = nearestNeighbor.getFooDebug( nextGray, scaledBox );
 
                     if( foo.relativeSimilarity > nearestNeighbor.getValidThreshold() ) {
                         //result.add( fernValue, foo.relativeSimilarity, scaledBox );
@@ -231,7 +395,6 @@ public class Jtdl {
         }
 
         return(result);
-
     }
 
     public static class SubResult {

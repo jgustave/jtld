@@ -64,6 +64,19 @@ public class Tracker {
         return( numTrackedRows * numTrackedColumns);
     }
 
+    public void init(IplImage initialImage) {
+        if( pyramidA != null ) {
+            pyramidA.release();
+        }
+        if( pyramidB != null ) {
+            pyramidB.release();
+        }
+
+        //NOTE: images should be same size, and not change size durring run.
+        pyramidA = cvCreateImage( cvSize(initialImage.width(), initialImage.height()), IPL_DEPTH_32F, 1);
+        pyramidB = cvCreateImage( cvSize(initialImage.width(), initialImage.height()), IPL_DEPTH_32F, 1);
+    }
+
     /**
      * Track from current image to next image, inside the given bounding box on currentImage
      * @param currentImage
@@ -77,16 +90,6 @@ public class Tracker {
 
         if( currentImage.width() != nextImage.width()  &&  currentImage.height() != nextImage.height() ) {
             throw new RuntimeException("Image size not consistent");
-        }
-
-        if( pyramidA == null ) {
-            //NOTE: images should be same size, and not change size durring run.
-            pyramidA = cvCreateImage(cvSize(currentImage.width(), currentImage.height() ),
-                                     IPL_DEPTH_32F,
-                                     1);
-            pyramidB = cvCreateImage(cvSize(nextImage.width(), nextImage.height() ),
-                                     IPL_DEPTH_32F,
-                                     1);
         }
 
         //TODO: can I make this a Member of the class? or atleast reset

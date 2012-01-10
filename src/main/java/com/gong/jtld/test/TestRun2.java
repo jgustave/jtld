@@ -73,7 +73,7 @@ public class TestRun2 {
 //                //TODO: put later
 
 
-                dResult = jtdl.detect( nextGray );
+                dResult = jtdl.detect( );
                 if( dResult.size() == 0 ) {
                     System.out.println("No Detections");
                 }else {
@@ -90,7 +90,7 @@ public class TestRun2 {
 //                        cvSaveImage("/tmp/help" + sr + ".png", Utils.getImagePatch( nextGray, sr.boundingBox ) );
 //                    }
 //                    cvSaveImage("/tmp/tracked" + trackerPredictedBoundingBox + ".png", Utils.getImagePatch( nextGray, trackerPredictedBoundingBox ) );
-                    jtdl.learn( nextGray, trackerPredictedBoundingBox );
+                    jtdl.learn(  );
                 }
 
 
@@ -152,7 +152,7 @@ public class TestRun2 {
         jtdl.nearestNeighbor.dump();
         System.out.println("Searching...");
         IplImage searchImage = cvLoadImage("/Users/jerdavis/devhome/jtld/images/00001.png", CV_LOAD_IMAGE_GRAYSCALE );
-        jtdl.detect( searchImage );
+        jtdl.detect( );
 
 //        double best = 0.0;
 //        for( ScanningBoundingBoxes boxes : jtdl.scanningBoundingBoxesList ) {

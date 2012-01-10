@@ -36,7 +36,7 @@ public class Test {
         System.out.println("Fern:" + jtdl.fern.measureVotesDebug( img2, (ScaledBoundingBox)boundingBox2a ) );
         System.out.println("Fern:" + jtdl.fern.measureVotesDebug( img3, (ScaledBoundingBox)boundingBox3a ) );
 
-        jtdl.learn( img2, boundingBox2a );
+        jtdl.learn(  );
 
         System.out.println("Fern:" + jtdl.fern.measureVotesDebug( img1, (ScaledBoundingBox)boundingBox1a ) );
         System.out.println("Fern:" + jtdl.fern.measureVotesDebug( img2, (ScaledBoundingBox)boundingBox2a ) );
