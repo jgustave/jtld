@@ -11,8 +11,6 @@ import static com.googlecode.javacv.cpp.opencv_imgproc.CV_GAUSSIAN;
 import static com.googlecode.javacv.cpp.opencv_imgproc.cvSmooth;
 import static com.gong.jtld.Jtdl.SCALES;
 
-//import static com.googlecode.javacv.cpp.opencv_core.cvSa/
-import static com.googlecode.javacv.cpp.opencv_highgui.cvSaveImage;
 import java.util.*;
 
 /**
@@ -93,8 +91,8 @@ public class Fern {
         int totalFeatures       = numFerns * featuresPerFern;
 
         //GENERATE THE FEATURES
-        float width  = initialBox.getWidth();
-        float height = initialBox.getHeight();
+        float width  = (float)Math.floor(initialBox.getWidth());
+        float height = (float)Math.floor(initialBox.getHeight());
         for( int x=0;x<totalFeatures;x++) {
             //Same feature but at different scales
             float rand1 = rand.nextFloat();
@@ -104,16 +102,16 @@ public class Fern {
 
             //Features at different scales
             for( int y=0;y<SCALES.length;y++) {
-                Feature feature = new Feature( (int)((width-1)*SCALES[y] * rand1),
-                                               (int)((height-1)*SCALES[y] * rand2),
-                                               (int)((width-1)*SCALES[y] * rand3),
-                                               (int)((height-1)*SCALES[y] * rand4)  );
+                Feature feature = new Feature( (int)((width*SCALES[y]-2) * rand1),
+                                               (int)((height*SCALES[y]-2) * rand2),
+                                               (int)((width*SCALES[y]-2) * rand3),
+                                               (int)((height*SCALES[y]-2) * rand4)  );
                 features[y][x] = feature;
             }
         }
-        int numFeatureElements = (int)Math.pow(2,featuresPerFern);
+        int numFeatureCombinations = (int)Math.pow(2,featuresPerFern);
         for( int x=0;x<numFerns;x++) {
-            for( int y=0;y<numFeatureElements;y++){
+            for( int y=0;y<numFeatureCombinations;y++){
                 positiveCounter[x][y]=0;
                 negativeCounter[x][y]=0;
                 posteriors[x][y]=0;
@@ -209,8 +207,8 @@ public class Fern {
             fern = 0;
             for( int y=0;y<this.featuresPerFern;y++) {
                 fern <<= 1;
-                fern |= features[scaleIndex][x*this.featuresPerFern+y].eval(image);
-            }
+                    fern |= features[scaleIndex][x*this.featuresPerFern+y].eval(image);
+                }
             ferns[x] = fern;
         }
         return( ferns );
@@ -362,9 +360,5 @@ public class Fern {
             System.out.println("PositiveCounts:" + Arrays.toString( pCount));
             System.out.println("NegativeCounts:" + Arrays.toString( nCount));
         }
-    }
-
-    public void getFernPatterns (IplImage fooImage, List<BoundingBox> closestList, int variance) {
-        //To change body of created methods use File | Settings | File Templates.
     }
 }

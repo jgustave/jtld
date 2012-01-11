@@ -374,10 +374,6 @@ public class Jtdl {
         List<SubResult> result          = new ArrayList<SubResult>();
         float           fernThreshold   = fern.getNumFerns()*fern.getMinThreshold();
 
-        cvSaveImage("/tmp/g1.png", grayImage1 );
-        cvSaveImage("/tmp/g2.png", grayImage2 );
-        cvSaveImage("/tmp/g3.png", smoothedGray );
-
         for( ScaledBoundingBox scaledBox : this.scanningBoxes ) {
 
             //First exclude areas that don't have high enough variance.
